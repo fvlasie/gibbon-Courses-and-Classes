@@ -1,4 +1,4 @@
-# BigBlueButton
+# Coursewide Settings Module for Gibbon
 
 Module for [Gibbon][gibbon]. Allows schools to include bbb video meetings in their lessons.
 
