@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //This file describes the module, including database tables
 
 //Basic variables
-$name        = 'Courses and Classes';
+$name        = 'Courses & Classes';
 $description = 'For setting things that apply to a whole course.';
 $entryURL    = 'coursesAndClasses_view.php';
 $type        = 'Additional';
@@ -36,8 +36,8 @@ $actionRows[] = [
     'precedence'                => '0', //If it is a grouped action, the precedence controls which is highest action in group
     'category'                  => 'Issues', //Optional: subgroups for the right hand side module menu
     'description'               => 'Allows the user to submit an issue to be resolved by the help desk staff.', //Text description
-    'URLList'                   => 'issues_create.php',
-    'entryURL'                  => 'issues_create.php',
+    'URLList'                   => 'coursesAndClasses_view.php',
+    'entryURL'                  => 'coursesAndClasses_view.php',
     'defaultPermissionAdmin'    => 'Y', //Default permission for built in role Admin
     'defaultPermissionTeacher'  => 'Y', //Default permission for built in role Teacher
     'defaultPermissionStudent'  => 'Y', //Default permission for built in role Student
@@ -47,4 +47,12 @@ $actionRows[] = [
     'categoryPermissionStudent' => 'Y', //Should this action be available to user roles in the Student category?
     'categoryPermissionParent'  => 'Y', //Should this action be available to user roles in the Parent category?
     'categoryPermissionOther'   => 'Y', //Should this action be available to user roles in the Other category?
+];
+
+use Gibbon\Module\CoursesAndClasses\Domain\ClassGateway;
+use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
+
+return [
+    ClassGateway::class => fn($container) => new ClassGateway($container->get('pdo')),
+    CourseGateway::class => fn($container) => new CourseGateway($container->get('pdo')),
 ];
