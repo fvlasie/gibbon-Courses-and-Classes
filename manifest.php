@@ -20,14 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //This file describes the module, including database tables
 
 //Basic variables
-$name        = 'Coursewide Settings';
+$name        = 'Courses and Classes';
 $description = 'For setting things that apply to a whole course.';
-$entryURL    = 'courseSettings_view.php';
+$entryURL    = 'coursesAndClasses_view.php';
 $type        = 'Additional';
 $version     = '0.1';
 $author      = 'Father Vlasie';
 $url = "https://github.com/fvlasie/gibbon-Coursewide-Settings";
-$category = 'Course';
+$category = 'Learn';
 
 //Action rows
 //One array per action
