@@ -28,3 +28,4 @@ class CourseGateway extends QueryableGateway
         return ['course.name', 'course.code'];
     }
 }
+ 

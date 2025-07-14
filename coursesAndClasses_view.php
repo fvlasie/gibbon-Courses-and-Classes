@@ -26,6 +26,7 @@ use Gibbon\Domain\User\UserGateway;
 use Gibbon\Forms\DatabaseFormFactory;
 use Gibbon\Forms\Form;
 use Gibbon\Module\CoursesAndClasses\Domain\ClassGateway;
+use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
 use Gibbon\Module\CoursesAndClasses\Domain\renderDebugPanel;
 use Gibbon\Services\Format;
 use Gibbon\Tables\DataTable;
@@ -35,16 +36,19 @@ require_once __DIR__ . '/moduleFunctions.php';
 
 $moduleName = $session->get('module');
 $courseID = $_GET['courseID'] ?? $_POST['courseID'] ?? null;
+$courseGateway = $container->get(CourseGateway::class);
+$courses = $courseGateway->select()->fetchAll();
 
 $page->breadcrumbs
-    ->add($moduleName)
-    ->add('Courses & Classes');
+    ->add($moduleName)->add('Overview');
 
 if (isActionAccessible($guid, $connection2, '/modules/Courses & Classes/coursesAndClasses_view.php') == false) {
     //Acess denied
     $page->addError(__m('You do not have access to this action.'));
 
 } else {
+        var_dump($container->has(\Gibbon\Module\CoursesAndClasses\Domain\ClassGateway::class));
+        var_dump($container->has(\Gibbon\Module\CoursesAndClasses\Domain\CourseGateway::class));
 
         echo "<h2>Hello world from Coursewide Settings!</h2>";
 

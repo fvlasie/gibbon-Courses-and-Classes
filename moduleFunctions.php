@@ -1,8 +1,9 @@
 <?php
-namespace Gibbon\Module\CoursesAndClasses;
 
 use Gibbon\Module;
 use Gibbon\Tables\DataGateway;
+
+echo "ModuleFunctions loaded!";
 
 function renderDebugPanel($session, $variables = [])
 {
