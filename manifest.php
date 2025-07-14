@@ -31,10 +31,3 @@ $actionRows[] = [
     'categoryPermissionOther'   => 'Y', //Should this action be available to user roles in the Other category?
 ];
 
-use Gibbon\Module\CoursesAndClasses\Domain\ClassGateway;
-use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
-
-return [
-    ClassGateway::class => fn($container) => new ClassGateway($container->get('pdo')),
-    CourseGateway::class => fn($container) => new CourseGateway($container->get('pdo')),
-];
