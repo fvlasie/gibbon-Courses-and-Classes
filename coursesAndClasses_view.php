@@ -14,15 +14,12 @@ use Gibbon\Module\CoursesAndClasses\Domain\renderDebugPanel;
 use Gibbon\Services\Format;
 use Gibbon\Tables\DataTable;
 
-return [
-    ClassGateway::class => fn($container) => new ClassGateway($container->get('pdo')),
-    CourseGateway::class => fn($container) => new CourseGateway($container->get('pdo')),
-];
-
 //Module includes
 require_once __DIR__ . '/moduleFunctions.php';
+//require_once __DIR__.'/Domain/CourseGateway.php';
   
 $moduleName = $session->get('module');
+$courseID = $_GET['gibbonCourseID'] ?? $_POST['gibbonCourseID'] ?? null;
 
 $page->breadcrumbs
     ->add($moduleName)->add('Overview');
@@ -32,30 +29,24 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
     $page->addError(__m('You do not have access to this action.'));
 
 } else {
-        echo "<h2>Hello world from Coursewide Settings!</h2>";
-        $courseID = $_GET['gibbonCourseID'] ?? $_POST['gibbonCourseID'] ?? null;
+        //echo "<h2>Hello world from Coursewide Settings!</h2>";
         $courseGateway = $container->get(CourseGateway::class);
         $criteria = new QueryCriteria();
-        $courses = $courseGateway->queryLimited();
+        $personID = $session->get('gibbonPersonID');
+        $courses = $courseGateway->getCoursesForUser($personID);
 
-        $classGateway = $container->get(ClassGateway::class);
+        echo '<h3>Your Courses</h3>';
+        echo '<ul>';
 
-        $criteria = $classGateway->newQueryCriteria()
-            ->searchBy($classGateway->getSearchableColumns(), $_POST['search'] ?? '')
-            ->sortBy(['name'])
-            ->fromPOST();
+        foreach ($courses as $course) {
+            echo '<li>' . htmlspecialchars($course['courseName'] . ' — ' . $course['className']) . '</li>';
+        }
 
-        $classes = $classGateway->queryClassesByCourse($criteria, $courseID ?? 0);
-
-        $table = DataTable::createPaginated('classList', $criteria);
-        $table->addColumn('name', __('Class Name'))->sortable(['name']);
-        $table->addColumn('code', __('Code'))->sortable(['code']);
-        $table->addColumn('description', __('Description'));
-
-        echo $table->render($classes);
+        echo '</ul>';
 }
 
-renderDebugPanel($session, [
-    'courseList' => $courses,
-    'activeCourseID' => $courseID ?? null,
+/* renderDebugPanel($session, [
+    'courseList' => count($courses),
+    'activeCourseID' => $courseID,
 ]);
+ */

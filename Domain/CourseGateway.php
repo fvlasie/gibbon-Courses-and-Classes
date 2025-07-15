@@ -53,11 +53,40 @@ class CourseGateway extends QueryableGateway
             $query = $this
                 ->newQuery()
                 ->from($this->getTableName())
-                ->cols(['gibbonCourseID', 'name', 'nameShort'])
-                ->orderBy(['name'])
-                ->limit(5); // This is the correct way to apply a limit
+                ->cols(['gibbonCourseID', 'name'])
+                ->limit(1); // This is the correct way to apply a limit
                 error_log($query->getStatement());
-            return $this->runQuery($query, new QueryCriteria());
+            return $this->runQuery($query,new QueryCriteria());
+        }
+    public function queryLeanCourses(): \Gibbon\Database\Result
+        {
+            $query = $this
+                ->newQuery()
+                ->from($this->getTableName())
+                ->cols(['gibbonCourseID', 'name']) // Keep it lean
+                ->orderBy(['name'])
+                ->limit(100);
+
+            return $this->db()->select($query->getStatement(), $query->getBindValues());
+        }
+    public function getCoursesForUser(string $personID): array
+        {
+            $query = $this
+                ->newQuery()
+                ->from("gibbonCourseClassPerson AS p")
+                ->join('INNER', 'gibbonCourseClass AS cc', 'cc.gibbonCourseClassID = p.gibbonCourseClassID')
+                ->join('INNER', 'gibbonCourse AS c', 'c.gibbonCourseID = cc.gibbonCourseID')
+                ->cols([
+                    "c.gibbonCourseID",
+                    "c.nameShort AS courseName",
+                    "cc.nameShort AS className"
+                ])
+                ->where('p.gibbonPersonID = :personID', ['personID' => $personID])
+                ->orderBy(['c.nameShort', 'cc.nameShort']);
+
+            $result = $this->db()->select($query->getStatement(), $query->getBindValues());
+
+            return iterator_to_array($result);
         }
 
 }

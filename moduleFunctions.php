@@ -2,8 +2,12 @@
 
 use Gibbon\Module;
 use Gibbon\Tables\DataGateway;
+use Gibbon\Module\CoursesAndClasses\Domain\ClassGateway;
+use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
 
-echo "ModuleFunctions loaded!";
+//echo "ModuleFunctions loaded!";
+
+require_once __DIR__ .'/Domain/CourseGateway.php';
 
 function renderDebugPanel($session, $variables = [])
 {
@@ -25,9 +29,14 @@ function renderDebugPanel($session, $variables = [])
     if (!empty($variables)) {
         echo '<br><strong>Local Variables:</strong><br>';
         foreach ($variables as $key => $value) {
-            echo $key . ': ' . htmlspecialchars(print_r($value, true)) . '<br>';
+            $debug = print_r($value, true);
+            if (strlen($debug) > 5000) {
+                $debug = substr($debug, 0, 5000) . '... [truncated]';
+            }
+            echo $key . ': ' . htmlspecialchars($debug) . '<br>';
         }
     }
+
 
     echo '</div>';
 }
