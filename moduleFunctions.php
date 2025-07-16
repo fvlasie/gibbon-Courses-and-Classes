@@ -1,42 +1,31 @@
 <?php
 
-use Gibbon\Module;
-use Gibbon\Tables\DataGateway;
-use Gibbon\Module\CoursesAndClasses\Domain\ClassGateway;
-use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
-
 //echo "ModuleFunctions loaded!";
 
-require_once __DIR__ .'/Domain/CourseGateway.php';
+require_once __DIR__ . '/src/Domain/CourseGateway.php';
+require_once __DIR__ . '/src/Domain/ClassGateway.php';
+require_once __DIR__ . '/src/Tables/CourseOverviewTable.php';
 
-function renderDebugPanel($session, $variables = [])
-{
-    if (!$session->get('gibbonPersonID') || $session->get('mode') !== 'Development') {
-        return;
-    }
+/* function getCoursesForUser($connection2, string $personID): array {
+    $query = "SELECT c.gibbonCourseID, c.name AS courseNameFull, c.nameShort AS courseName, cc.nameShort AS className
+              FROM gibbonCourseClassPerson AS p
+              JOIN gibbonCourseClass AS cc ON cc.gibbonCourseClassID = p.gibbonCourseClassID
+              JOIN gibbonCourse AS c ON c.gibbonCourseID = cc.gibbonCourseID
+              WHERE p.gibbonPersonID = :personID
+              ORDER BY c.nameShort, cc.nameShort";
 
-    echo '<div style="background:#f9f9f9;border:1px solid #ccc;padding:1em;margin:1em 0;font-family:monospace;">';
-    echo '<h3 style="margin-top:0;">Debug Panel</h3>';
+    $stmt = $connection2->prepare($query);
+    $stmt->bindValue(':personID', $personID);
+    $stmt->execute();
 
-    echo '<strong>Session Info:</strong><br>';
-    echo 'User ID: ' . $session->get('gibbonPersonID') . '<br>';
-    echo 'Role: ' . $session->get('gibbonRoleIDCurrent') . '<br>';
-    echo 'Module: ' . $session->get('module') . '<br>';
-    echo 'Page: ' . $session->get('page') . '<br>';
-    echo 'Course ID: ' . ($session->get('courseID') ?? 'N/A') . '<br>';
-    echo 'Class ID: ' . ($session->get('classID') ?? 'N/A') . '<br>';
+    return $stmt->fetchAll();
+} */
 
-    if (!empty($variables)) {
-        echo '<br><strong>Local Variables:</strong><br>';
-        foreach ($variables as $key => $value) {
-            $debug = print_r($value, true);
-            if (strlen($debug) > 5000) {
-                $debug = substr($debug, 0, 5000) . '... [truncated]';
-            }
-            echo $key . ': ' . htmlspecialchars($debug) . '<br>';
-        }
-    }
+function getClassesByCourse($connection2, $courseID): array {
+    $query = "SELECT * FROM class WHERE courseID = :courseID ORDER BY name";
+    $stmt = $connection2->prepare($query);
+    $stmt->bindValue(':courseID', $courseID);
+    $stmt->execute();
 
-
-    echo '</div>';
+    return $stmt->fetchAll();
 }
