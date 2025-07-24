@@ -5,13 +5,17 @@ namespace Gibbon\Module\CoursesAndClasses\Domain;
 use Gibbon\Contracts\Database\Connection;
 use Gibbon\Domain\QueryCriteria;
 use Gibbon\Domain\QueryableGateway;
+use \PDO;
 
 class CourseGateway extends QueryableGateway
 {
-    public function __construct(Connection $db)
-    {
-        parent::__construct($db);
-    }
+    private Connection $connection;
+public function __construct(Connection $connection)
+{
+    parent::__construct($connection);      // 🔁 Call parent constructor
+    $this->connection = $connection;       // ✅ Set your local property
+}
+
 
     public function getTableName(): string
     {
@@ -20,6 +24,8 @@ class CourseGateway extends QueryableGateway
 
     public function queryCoursesByPerson(QueryCriteria $criteria, string $gibbonPersonID)
     {
+        error_log('[Before runQuery]');
+
         $query = $this
             ->newQuery()
             ->cols([
@@ -34,8 +40,9 @@ class CourseGateway extends QueryableGateway
             ->where('p.gibbonPersonID = :gibbonPersonID', ['gibbonPersonID' => $gibbonPersonID])
             ->orderBy(['c.name', 'cc.nameShort']);
             //error_log('[Bind Check] gibbonPersonID = ' . $gibbonPersonID);
-
-        return $this->runQuery($query, $criteria);
+            //error_log('[SQL] ' . $query->getStatement());
+            $query->limit(5);
+            return $this->runQuery($query, $criteria);
     }
 
     public function getSearchableColumns(): array
@@ -98,6 +105,24 @@ class CourseGateway extends QueryableGateway
         }
 
         return $rows;
+    }
+    public function queryRawCoursesByPerson(string $gibbonPersonID): array
+    {
+        $sql = "
+            SELECT c.gibbonCourseID, c.name AS courseNameFull, c.nameShort AS courseName, cc.nameShort AS className
+            FROM gibbonCourseClassPerson AS p
+            INNER JOIN gibbonCourseClass AS cc ON p.gibbonCourseClassID = cc.gibbonCourseClassID
+            INNER JOIN gibbonCourse AS c ON cc.gibbonCourseID = c.gibbonCourseID
+            WHERE p.gibbonPersonID = :gibbonPersonID
+            ORDER BY c.name, cc.nameShort
+            LIMIT 50
+        ";
+
+        $pdo = $this->connection->getConnection();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['gibbonPersonID' => $gibbonPersonID]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
 }
