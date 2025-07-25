@@ -13,18 +13,28 @@ class CourseMaterialsGateway
         $this->resourceGateway = new ResourceGateway($connection);
     }
 
-    public function selectByCourseIDs(array $courseIDs): array
-    {
+    public function selectAll(): array {
         $criteria = new QueryCriteria();
-        $criteria->filterBy('tags', 'ict'); // or whatever tag you're targeting
+        $criteria->sortBy('timestamp', 'DESC');
 
-        $resources = $this->resourceGateway->queryResources($criteria);
+        return $this->resourceGateway->queryResources($criteria)->toArray();
+    }
 
-        // Optional: group by courseID
+    private function tagMatchesCourse(string $tagString, string $courseID): bool {
+        $tags = array_map('trim', explode(',', $tagString));
+        return in_array($courseID, $tags);
+    }
+
+    public function selectByCourseNames(array $courseIDs): array {
+        $resources = $this->selectAll(); // or call raw query
         $grouped = [];
-        foreach ($resources->toArray() as $resource) {
-            $id = $resource['gibbonCourseID'] ?? null;
-            if ($id) $grouped[$id][] = $resource;
+
+        foreach ($resources as $resource) {
+            foreach ($courseIDs as $courseID) {
+                if ($this->tagMatchesCourse($resource['tags'], $courseID)) {
+                    $grouped[$courseID][] = $resource;
+                }
+            }
         }
 
         return $grouped;
