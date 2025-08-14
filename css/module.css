@@ -1,0 +1,53 @@
+th.no-header {
+    color: transparent;
+}
+
+#materialsTable {
+    width: 100%;
+}
+
+#form > div > section {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+
+}
+
+.right {
+    text-align: right;
+}
+
+.button-invisible {
+    opacity: 0;
+    transition: all 0.4s ease;
+    pointer-events: none;
+    cursor: default;
+}
+
+.button-visible {
+    opacity: 1;
+    transition: all 0.4s ease;
+    cursor: pointer;
+}
+
+.button-visible,
+.button-invisible {
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+
+/* Hidden panel for the Add form */
+#addMaterialPanel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.5s ease;
+  opacity: 0;
+}
+
+/* When visible */
+#addMaterialPanel.visible {
+  max-height: 500px; /* or auto with JS assist */
+  opacity: 1;
+}

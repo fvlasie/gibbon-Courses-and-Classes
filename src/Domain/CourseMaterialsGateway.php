@@ -8,8 +8,7 @@ class CourseMaterialsGateway
 {
     private ResourceGateway $resourceGateway;
 
-    public function __construct(Connection $connection)
-    {
+    public function __construct(Connection $connection) {
         $this->resourceGateway = new ResourceGateway($connection);
     }
 
@@ -38,5 +37,46 @@ class CourseMaterialsGateway
         }
 
         return $grouped;
+    }
+
+    public function insertResource(array $resourceData): ?int {
+        if (empty($resourceData['name']) || empty($resourceData['content'])) {
+            // Optionally log or throw
+            return null;
+        }
+
+        return $this->resourceGateway->insert($resourceData);
+    }
+
+    public function deleteResource(int $resourceID): bool {
+        if ($resourceID <= 0) {
+            return false;
+        }
+
+        $resource = $this->resourceGateway->getByID($resourceID);
+        if ($resource === false) {
+            return false;
+        }
+
+        // Remove file from uploads directory
+        $relativePath = $resource['content'] ?? '';
+        if (!empty($relativePath)) {
+            $absolutePath = __DIR__ . '/../../uploads/' . $relativePath;
+
+            if (file_exists($absolutePath)) {
+                unlink($absolutePath);
+            }
+        }
+
+        // Delete from DB
+        return $this->resourceGateway->delete($resourceID);
+    }
+
+    public function getResourceByID(int $resourceID): ?array {
+        if ($resourceID <= 0) {
+            return null;
+        }
+
+        return $this->resourceGateway->getByID($resourceID) ?: null;
     }
 }

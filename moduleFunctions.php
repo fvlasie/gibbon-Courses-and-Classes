@@ -6,14 +6,6 @@ require_once __DIR__ . '/src/Domain/CourseGateway.php';
 require_once __DIR__ . '/src/Domain/ClassGateway.php';
 require_once __DIR__ . '/src/Tables/CourseOverviewTable.php';
 
-/* function getClassesByCourse(Connection $connection, $courseID): array {
-    $sql = "SELECT * FROM class WHERE courseID = :courseID ORDER BY name";
-    $params = ['courseID' => $courseID];
-error_log('SQL Query: ' . $sql);
-    $result = $connection->executeQuery($sql, $params);
-    return $result->fetchAll();
-} */
-
 function getClassInfoByCourse(Connection $connection, $courseID): array {
     $sql = "SELECT gibbonCourseClassID, name AS classNameFull FROM gibbonCourseClass WHERE gibbonCourseID = :courseID ORDER BY name";
     $params = ['courseID' => $courseID];
@@ -31,7 +23,6 @@ function getClassInfoByCourse(Connection $connection, $courseID): array {
     return $classes;
 }
 
-
 function getResourceLink($guid, $gibbonResourceID, $type, $name, $content)
 {
     global $session;
@@ -48,3 +39,67 @@ function getResourceLink($guid, $gibbonResourceID, $type, $name, $content)
 
     return $output;
 }
+
+function buildURL(string $script, array $params = [], ?string $module = null): string {
+    global $session;
+
+    $baseURL = $session->get('absoluteURL') . '/index.php';
+    $path = '/modules/' . ($module ?? $session->get('module')) . '/' . $script;
+
+    // 'q' becomes the core routing param
+    $query = array_merge(['q' => $path], $params);
+    $queryString = http_build_query($query);
+
+    return $baseURL . '?' . $queryString;
+}
+
+function collapseByCourse(array $rows, array $resources, string $guid, array $classMap): array
+{
+    $grouped = [];
+
+    foreach ($rows as $row) {
+        $code = $row['courseName'] ?? '[Unknown]';
+        $className = $row['className'] ?? '[Unassigned]';
+
+        if (!isset($grouped[$code])) {
+            $files = $resources[$code] ?? [];
+            $uniqueFiles = [];
+            foreach ($files as $file) {
+                $id = $file['gibbonResourceID'];
+                if (!isset($uniqueFiles[$id])) {
+                    $uniqueFiles[$id] = $file;
+                }
+            }
+
+            $grouped[$code] = [
+                'courseName' => $code,
+                'gibbonCourseID' => $row['gibbonCourseID'],
+                'courseNameFull' => $row['courseNameFull'] ?? '[Unknown Name]',
+                'materials' => $uniqueFiles,
+                'classes' => []
+            ];
+        }
+
+        if (!array_filter($grouped[$code]['classes'], fn($c) => $c['name'] === $className)) {
+            $classInfo = $classMap[$row['gibbonCourseID']][$className] ?? [];
+
+            $grouped[$code]['classes'][] = [
+                'name' => $className,
+                'fullName' => $code . '.' . $className ?? $className,
+                'classID' => $classInfo['id'] ?? null,
+            ];
+
+            // Now rebuild the links from the updated list
+            $classes = array_map(function ($class) {
+                $url = buildURL('class_view.php', ['gibbonCourseClassID' => $class['classID']]);
+                return $class['classID']
+                    ? "<a href='{$url}'>" . htmlspecialchars($class['fullName']) . "</a>"
+                    : htmlspecialchars($class['fullName']);
+            }, $grouped[$code]['classes']);
+
+            $grouped[$code]['classLinks'] = implode(', ', $classes);
+        }
+    }
+    return $grouped;
+}
+
