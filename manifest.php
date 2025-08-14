@@ -31,17 +31,6 @@ $category = 'Learn';
     'categoryPermissionOther'   => 'Y', //Should this action be available to user roles in the Other category?
 ]; 
 
-$moduleTables[] = "CREATE TABLE `gibbonCourseSetting` (
-    `gibbonCourseSettingID` int(8) unsigned zerofill NOT NULL AUTO_INCREMENT,
-    `gibbonCourseID` int(8) unsigned zerofill NOT NULL,
-    `settingKey` varchar(64) NOT NULL,
-    `settingValue` text NOT NULL,
-    `dateModified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`gibbonCourseSettingID`),
-    FOREIGN KEY (`gibbonCourseID`) REFERENCES `gibbonCourse`(`gibbonCourseID`)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-
 //Hooks
 $actionRows[1]['name'] = 'Course Materials';
 $actionRows[1]['precedence'] = '0';
@@ -80,6 +69,17 @@ $actionRows[2] = [
     'categoryPermissionParent' => 'N',
     'categoryPermissionOther' => 'N',
 ];
+
+/* $moduleTables[] = "CREATE TABLE `gibbonCourseSetting` (
+    `gibbonCourseSettingID` int(8) unsigned zerofill NOT NULL AUTO_INCREMENT,
+    `gibbonCourseID` int(8) unsigned zerofill NOT NULL,
+    `settingKey` varchar(64) NOT NULL,
+    `settingValue` text NOT NULL,
+    `dateModified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`gibbonCourseSettingID`),
+    FOREIGN KEY (`gibbonCourseID`) REFERENCES `gibbonCourse`(`gibbonCourseID`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;"; */
 
 
 $array = [
