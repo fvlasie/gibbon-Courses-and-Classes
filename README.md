@@ -1,6 +1,6 @@
-# Coursewide Settings Module for Gibbon
+# Courses and Classes Module for Gibbon
 
-Module for [Gibbon][gibbon]. Allows schools to include coursewide materials such as syllabi in lessons.
+Module for [Gibbon][gibbon]. Introduces a course-centric navigation aid (similar to other LMSs) and allows schools to include coursewide materials such as syllabi in lessons.
 
 [gibbon]: https://gibbonedu.org
 
@@ -18,3 +18,5 @@ For support visit [https://gibbonedu.org/support](https://gibbonedu.org/support)
 ## License
 
 This module is licensed under GPLv3.
+
+https://github.com/fvlasie/gibbon-Coursewide-Settings
