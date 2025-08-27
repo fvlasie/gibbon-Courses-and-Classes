@@ -7,7 +7,7 @@ Module for [Gibbon][gibbon]. Introduces a course-centric navigation aid (similar
 ## Installation & Support
 
 To install, just copy this folder into `GIBBON_HOME/modules` so that this file
-exists: `GIBBON_HOME/modules/Coursewide Settings/manifest.php`.
+exists: `GIBBON_HOME/modules/Courses and Classes/manifest.php`.
 
 For support visit [https://gibbonedu.org/support](https://gibbonedu.org/support).
 
