@@ -103,3 +103,37 @@ function collapseByCourse(array $rows, array $resources, string $guid, array $cl
     return $grouped;
 }
 
+function expandCoursesToRows(array $courses): array {
+    $rows = [];
+
+    foreach ($courses as $course) {
+        $rows[] = [
+            'rowType' => 'header',
+            'courseNameFull' => $course['courseNameFull'],
+            'courseName' => $course['courseName'],
+        ];
+
+        $rows[] = [
+            'rowType' => 'details',
+            'courseName' => $course['courseName'],            
+            'units' => "index.php?q=%2Fmodules%2FPlanner%2Funits.php&viewBy=class&gibbonCourseID={$course['gibbonCourseID']}&Go=Go",
+            'outcomes' => "index.php?q=%2Fmodules%2FPlanner%2Foutcomes.php&gibbonCourseID={$course['gibbonCourseID']}",
+            'rubrics' => "index.php?q=/modules/Rubrics/rubrics_view.php&gibbonCourseID={$course['gibbonCourseID']}",
+            'classes' => $course['classes'],
+        ];
+
+        $rows[] = [
+            'rowType' => 'materialsHeader',
+            'courseName' => $course['courseName'],
+        ];
+
+        $rows[] = [
+            'rowType' => 'materials',
+            'courseName' => $course['courseName'],
+            'materials' => $course['materials'],
+        ];
+
+    }
+
+    return $rows;
+}
