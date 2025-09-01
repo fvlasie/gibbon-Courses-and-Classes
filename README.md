@@ -13,7 +13,7 @@ For support visit [https://gibbonedu.org/support](https://gibbonedu.org/support)
 
 ## Compatibility
 
-* v1.5 supports Gibbon v30+
+* v1.5+ supports Gibbon v30+
 
 ## License
 

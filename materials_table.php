@@ -1,7 +1,6 @@
 <?php
 use Gibbon\Contracts\Database\Connection;
 use Gibbon\Domain\DataSet;
-use Gibbon\Forms\Form;
 use Gibbon\Module\CoursesAndClasses\Domain\CourseMaterialsGateway;
 use Gibbon\Tables\DataTable;
 
