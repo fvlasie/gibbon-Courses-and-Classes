@@ -31,7 +31,6 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
         $connection = $container->get(Connection::class);
         $gateway = new CourseGateway($connection);        
         $coursesArray = $gateway->queryRawCoursesByPerson($personID);
-        //$courses = new DataSet($coursesArray);
         $courses = new DataSet($coursesArray);
         //error_log('[DataSet Row Count] ' . count($courses->toArray()));
         if (count($courses) === 0) {
@@ -48,6 +47,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                     $classMap[$courseID] = getClassInfoByCourse($connection, $courseID);
                 }
             $collapsed = collapseByCourse($courses->toArray(), $resources, $personID, $classMap);
+
             $data = expandCoursesToRows($collapsed);
             echo "<h2>" . __('📚 My Courses') . "</h2>";
 
@@ -61,7 +61,10 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
             $formatOverview = function ($row) use ($guid, $connection2) {
                 switch ($row['rowType']) {
                     case 'header':
-                        return "<p class='course-header'><strong><span style='font-size:3em;vertical-align: -.3em'>🦉</span>{$row['courseNameFull']}</strong> <code>({$row['courseName']})</code></p>";
+                        return "<p class='course-header'><strong><span style='font-size:2em;vertical-align: -.2em'>🦉</span>{$row['courseNameFull']}</strong> <code>({$row['courseName']})</code></p>";
+
+                    case 'externalCode': 
+                        return "External Course Code: {$row['externalCourseCode']}";
 
                     case 'details':
                         if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
@@ -112,16 +115,27 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
             };
 
             $formatActions = function ($row, $actions) use ($guid, $connection2) {
-                if ($row['rowType'] !== 'materialsHeader') return '';
-
-                if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
-                    $actions->addAction('edit', __('Edit'), 'Edit Course Materials')
-                        ->setURL('/fullscreen.php')
-                        ->addParam('q', '/modules/Courses and Classes/materials_edit.php')
-                        ->addParam('courseName', $row['courseName'])
-                        ->directLink(true)
-                        ->modalWindow();
+                if ($row['rowType'] === 'materialsHeader') {
+                    if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
+                        $actions->addAction('edit', __('Edit'), 'Edit Course Materials')
+                            ->setURL('/fullscreen.php')
+                            ->addParam('q', '/modules/Courses and Classes/materials_edit.php')
+                            ->addParam('courseName', $row['courseName'])
+                            ->directLink(true)
+                            ->modalWindow();
+                    }
                 }
+                if ($row['rowType'] === 'externalCode') {
+                    if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
+                        $actions->addAction('edit', __('Edit'), 'Edit External Course Code')
+                            ->setURL('/fullscreen.php')
+                            ->addParam('q', '/modules/Courses and Classes/externalCourseCode_edit.php')
+                            ->addParam('gibbonCourseID', $row['gibbonCourseID'])
+                            ->directLink(true)
+                            ->modalWindow();
+                    }
+                }
+                return '';
             };
 
             foreach ($groupedCourses as $courseName => $courseRows) {

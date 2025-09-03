@@ -23,8 +23,7 @@ function getClassInfoByCourse(Connection $connection, $courseID): array {
     return $classes;
 }
 
-function getResourceLink($guid, $gibbonResourceID, $type, $name, $content)
-{
+function getResourceLink($guid, $gibbonResourceID, $type, $name, $content) {
     global $session;
 
     $output = false;
@@ -53,8 +52,7 @@ function buildURL(string $script, array $params = [], ?string $module = null): s
     return $baseURL . '?' . $queryString;
 }
 
-function collapseByCourse(array $rows, array $resources, string $guid, array $classMap): array
-{
+function collapseByCourse(array $rows, array $resources, string $guid, array $classMap): array {
     $grouped = [];
 
     foreach ($rows as $row) {
@@ -75,6 +73,7 @@ function collapseByCourse(array $rows, array $resources, string $guid, array $cl
                 'courseName' => $code,
                 'gibbonCourseID' => $row['gibbonCourseID'],
                 'courseNameFull' => $row['courseNameFull'] ?? '[Unknown Name]',
+                'externalCourseCode' => $row['externalCourseCode'] ?? '',
                 'materials' => $uniqueFiles,
                 'classes' => []
             ];
@@ -111,6 +110,13 @@ function expandCoursesToRows(array $courses): array {
             'rowType' => 'header',
             'courseNameFull' => $course['courseNameFull'],
             'courseName' => $course['courseName'],
+        ];
+
+        $rows[] = [
+            'rowType' => 'externalCode',
+            'courseName' => $course['courseName'],
+            'externalCourseCode' => $course['externalCourseCode'] ?? '',
+            'gibbonCourseID' => $course['gibbonCourseID'],
         ];
 
         $rows[] = [

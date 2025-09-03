@@ -6,7 +6,7 @@ $name        = 'Courses and Classes';
 $description = 'A Course-centric workflow for Gibbon.';
 $entryURL    = 'coursesAndClasses_view.php';
 $type        = 'Additional';
-$version     = '1.5.1';
+$version     = '1.6';
 $author      = 'Father Vlasie';
 $url = "https://github.com/fvlasie/gibbon-Coursewide-Settings";
 $category = 'Learn';
@@ -70,16 +70,16 @@ $actionRows[2] = [
     'categoryPermissionOther' => 'N',
 ];
 
-/* $moduleTables[] = "CREATE TABLE `gibbonCourseSetting` (
-    `gibbonCourseSettingID` int(8) unsigned zerofill NOT NULL AUTO_INCREMENT,
-    `gibbonCourseID` int(8) unsigned zerofill NOT NULL,
-    `settingKey` varchar(64) NOT NULL,
-    `settingValue` text NOT NULL,
-    `dateModified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`gibbonCourseSettingID`),
+$moduleTables[] = "CREATE TABLE `gibbonCoursesAndClasses` (
+    `gibbonCoursesAndClassesID` INT(8) UNSIGNED ZEROFILL NOT NULL AUTO_INCREMENT,
+    `gibbonCourseID` INT(8) UNSIGNED ZEROFILL NOT NULL,
+    `externalCourseCode` VARCHAR(255) DEFAULT NULL,
+    `dateModified` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`gibbonCoursesAndClassesID`),
     FOREIGN KEY (`gibbonCourseID`) REFERENCES `gibbonCourse`(`gibbonCourseID`)
         ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;"; */
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
+
 
 
 $array = [

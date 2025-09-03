@@ -33,10 +33,11 @@ class CourseGateway extends QueryableGateway
     public function queryRawCoursesByPerson(string $gibbonPersonID): array
     {
         $sql = "
-            SELECT c.gibbonCourseID, c.name AS courseNameFull, c.nameShort AS courseName, cc.nameShort AS className
+            SELECT c.gibbonCourseID, c.name AS courseNameFull, c.nameShort AS courseName, cac.externalCourseCode, cc.nameShort AS className
             FROM gibbonCourseClassPerson AS p
             INNER JOIN gibbonCourseClass AS cc ON p.gibbonCourseClassID = cc.gibbonCourseClassID
             INNER JOIN gibbonCourse AS c ON cc.gibbonCourseID = c.gibbonCourseID
+            LEFT JOIN gibbonCoursesAndClasses AS cac ON cac.gibbonCourseID = c.gibbonCourseID
             INNER JOIN gibbonSchoolYear AS sy ON c.gibbonSchoolYearID = sy.gibbonSchoolYearID
             WHERE p.gibbonPersonID = :gibbonPersonID
             AND sy.status = 'Current'
