@@ -19,4 +19,4 @@ For support visit [https://gibbonedu.org/support](https://gibbonedu.org/support)
 
 This module is licensed under GPLv3.
 
-https://github.com/fvlasie/gibbon-Coursewide-Settings
+https://github.com/fvlasie/gibbon-Courses-and-Classes
