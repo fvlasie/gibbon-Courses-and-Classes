@@ -2,7 +2,10 @@ th.no-header {
     color: transparent;
 }
 
-#materialsTable {
+#materialsTable,
+#assignmentsTable,
+#assignmentManageContent,
+#materialsManageContent {
     width: 100%;
 }
 
@@ -38,18 +41,24 @@ th.no-header {
 }
 
 
-/* Hidden panel for the Add form */
-#addMaterialPanel {
+#addMaterialPanel,
+#addAssignmentPanel {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.5s ease, opacity 0.5s ease;
   opacity: 0;
 }
 
-/* When visible */
-#addMaterialPanel.visible {
-  max-height: 500px; /* or auto with JS assist */
+#addMaterialPanel.visible,
+#addAssignmentPanel.visible {
+  max-height: 2000px;
+  overflow: visible;
   opacity: 1;
+}
+
+/* Core forms stick the submit section to the viewport; that covers fields in a modal. */
+#modal section#submit {
+  position: static !important;
 }
 
 .materials-row {
@@ -71,8 +80,8 @@ th.no-header {
 }
 
 .material-icon {
-    width: 64px;
-    height: 64px;
+    width: 58px;
+    height: 58px;
     margin-bottom: 0.25rem;
 }
 

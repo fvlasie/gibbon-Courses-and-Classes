@@ -1,16 +1,13 @@
 <?php
-use Gibbon\Contracts\Database\Connection;
 use Gibbon\Domain\DataSet;
 use Gibbon\Module\CoursesAndClasses\Domain\CourseMaterialsGateway;
 use Gibbon\Tables\DataTable;
 
 require_once 'moduleFunctions.php';
-// Setup
+
 $gateway = new CourseMaterialsGateway($pdo);
 $materials = $gateway->selectByCourseNames([$courseName]);
-$material = [];
 
-// Flatten materials for DataTable
 $flatMaterials = [];
 foreach ($materials as $course => $courseMaterials) {
     foreach ($courseMaterials as $material) {
@@ -19,16 +16,16 @@ foreach ($materials as $course => $courseMaterials) {
 }
 $data = new DataSet($flatMaterials);
 
+$absoluteURL = $session->get('absoluteURL');
+$modulePath = $absoluteURL.'/modules/Courses and Classes';
+
 $table = DataTable::create('CourseMaterials', null, ['class' => 'w-full mb-2 relative']);
 $table->setTitle(__('📁 Course Materials for ') . htmlspecialchars($courseName));
 
 $table->addHeaderAction('add', __('Add'))
     ->setURL('#')
-    ->setAttribute('onclick', 'toggleAddPanel();')
+    ->setAttribute('onclick', 'toggleAddPanel(); return false;')
     ->setAttribute('@click', 'modalOpen = true')
-    ->setAttribute('hx-post', $session->get('absoluteURL') . '/modules/Courses and Classes/materials_add.php?courseName=' . urlencode($courseName))
-    ->setAttribute('hx-target', '#addMaterialPanel')
-    ->setAttribute('hx-swap', 'innerHTML')
     ->setClass('button-visible');
 
 $table->addColumn('name', __('Title'));
@@ -37,32 +34,31 @@ $table->addColumn('timestamp', __('Uploaded'));
 
 $table->addActionColumn()
     ->setClass('no-header')
-    ->format(function ($row, $actions) use ($session, $courseName) {
+    ->format(function ($row, $actions) use ($modulePath, $courseName) {
         $id = $row['gibbonResourceID'];
+        $deleteUrl = $modulePath.'/materials_delete.php?courseName='.urlencode($courseName).'&materialID='.$id;
 
-        $actions->addAction('delete', __('Confirm Deletion'))
-            ->setURL('modules/Courses and Classes/materials_delete.php')
-            ->setAttribute('@click', 'modalOpen = true')
+        $actions->addAction('remove', __('Confirm Deletion'))
+            ->setURL('#')
+            ->modalWindow()
             ->setClass('red button-invisible')
-            ->setAttribute('hx-post', 'modules/Courses and Classes/materials_delete.php?courseName=' . urlencode($courseName).'&materialID='.$id)
-            ->setAttribute('hx-target', '#materialsTable')
-            ->setAttribute('hx-swap', 'innerHTML')
-            ->setIcon('garbage');
+            ->setIcon('garbage')
+            ->setAttribute('hx-get', $deleteUrl)
+            ->setAttribute('hx-target', '#modalContent')
+            ->setAttribute('hx-push-url', 'false')
+            ->setAttribute('hx-swap', 'innerHTML');
 
         $actions->addAction('quit', __('Cancel'))
-            ->setURL('#') // Prevent default navigation
-            ->setAttribute('@click', 'modalOpen = true')
+            ->setURL('#')
             ->setClass('button-invisible')
-            ->setIcon('iconCross');
+            ->setIcon('iconCross')
+            ->setAttribute('@click', 'modalOpen = true');
 
         $actions->addAction('trash', __('Delete'))
-            ->setURL('#') // Prevent default navigation
-            ->setAttribute('@click', 'modalOpen = true')
+            ->setURL('#')
             ->setClass('button-visible')
-            ->setIcon('garbage');
+            ->setIcon('garbage')
+            ->setAttribute('@click', 'modalOpen = true');
     });
 
-echo '<div id="materialsTable" >';
 echo $table->render($data);
-echo '</div>';
-?>

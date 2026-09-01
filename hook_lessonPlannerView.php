@@ -8,9 +8,6 @@ global $session, $container, $page;
 
 require_once __DIR__ . '/../Courses and Classes/src/Domain/CourseMaterialsGateway.php';
 
-// Debug marker: file was included
-//error_log('hook_lessonPlannerView included');
-
 // Get DB connection
 $connection = $container->get(Connection::class);
 
