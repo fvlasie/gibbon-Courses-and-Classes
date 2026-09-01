@@ -2,15 +2,14 @@
 
 use Gibbon\Contracts\Database\Connection;
 use Gibbon\Domain\DataSet;
-use Gibbon\Tables\Action;
-use Gibbon\Module\CoursesAndClasses\Domain\ClassGateway;
 use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
 use Gibbon\Module\CoursesAndClasses\Domain\CourseMaterialsGateway;
-use Gibbon\Services\Format;
+use Gibbon\Module\CoursesAndClasses\Domain\AssignmentGateway;
 use Gibbon\Tables\DataTable;
 
 //Module includes
 require_once 'moduleFunctions.php';
+checkAndMigrateCoursesAndClassesSchema($pdo);
 
 global $container;
 $courseID = $_GET['gibbonCourseID'] ?? $_POST['gibbonCourseID'] ?? null;
@@ -29,10 +28,20 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
 } else {
         $classMap = [];
         $connection = $container->get(Connection::class);
-        $gateway = new CourseGateway($connection);        
+        $gateway = new CourseGateway($connection);
         $coursesArray = $gateway->queryRawCoursesByPerson($personID);
+
+        $canOpenOtherCourses = isActionAccessible($guid, $connection2, '/modules/Courses and Classes/courses_manage.php');
+        $otherCourseID = (int)($_GET['gibbonCourseID'] ?? 0);
+        if ($canOpenOtherCourses && $otherCourseID > 0) {
+            $alreadyListed = in_array($otherCourseID, array_column($coursesArray, 'gibbonCourseID'));
+            if (!$alreadyListed) {
+                $coursesArray = array_merge($coursesArray, $gateway->queryRawCourseByID($otherCourseID));
+            }
+        }
+
         $courses = new DataSet($coursesArray);
-        //error_log('[DataSet Row Count] ' . count($courses->toArray()));
+
         if (count($courses) === 0) {
             echo '<p><em>No courses found for this user.</em></p>';
         } else {
@@ -42,11 +51,18 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
 
             $materialsGateway = new CourseMaterialsGateway($connection);
             $resources = $materialsGateway->selectByCourseNames($courseNames);
+
+            $assignmentGateway = new AssignmentGateway($connection);
+            $assignmentsMap = [];
+            foreach ($courseIDs as $cID) {
+                $assignmentsMap[$cID] = $assignmentGateway->getAssignmentsByCourse((int)$cID);
+            }
+
             $classMap = [];
                 foreach ($courseIDs as $courseID) {
                     $classMap[$courseID] = getClassInfoByCourse($connection, $courseID);
                 }
-            $collapsed = collapseByCourse($courses->toArray(), $resources, $personID, $classMap);
+            $collapsed = collapseByCourse($courses->toArray(), $resources, $personID, $classMap, $assignmentsMap);
 
             $data = expandCoursesToRows($collapsed);
             echo "<h2>" . __('📚 My Courses') . "</h2>";
@@ -63,8 +79,10 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                     case 'header':
                         return "<p class='course-header'><strong><span style='font-size:2em;vertical-align: -.2em'>🦉</span>{$row['courseNameFull']}</strong> <code>({$row['courseName']})</code></p>";
 
-                    case 'externalCode': 
-                        return "External Course Code: {$row['externalCourseCode']}";
+                    case 'externalCode':
+                        $external = !empty($row['externalCourseCode']) ? htmlspecialchars($row['externalCourseCode']) : __('Not set');
+                        $credits = number_format((float)($row['credits'] ?? 0), 2);
+                        return __('External Course Code').': '.$external.' &nbsp;|&nbsp; '.__('Credits').': '.$credits;
 
                     case 'details':
                         if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
@@ -72,7 +90,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                         } else { $units = ""; }
                         if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
                             $outcomes = "<div class='material-item'><a href='{$row['outcomes']}'><div class='material-icon'>
-                                            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill='#A8ADB8' d='M197.8 100.3C208.7 107.9 211.3 122.9 203.7 133.7L147.7 213.7C143.6 219.5 137.2 223.2 130.1 223.8C123 224.4 116 222 111 217L71 177C61.7 167.6 61.7 152.4 71 143C80.3 133.6 95.6 133.7 105 143L124.8 162.8L164.4 106.2C172 95.3 187 92.7 197.8 100.3zM197.8 260.3C208.7 267.9 211.3 282.9 203.7 293.7L147.7 373.7C143.6 379.5 137.2 383.2 130.1 383.8C123 384.4 116 382 111 377L71 337C61.6 327.6 61.6 312.4 71 303.1C80.4 293.8 95.6 293.7 104.9 303.1L124.7 322.9L164.3 266.3C171.9 255.4 186.9 252.8 197.7 260.4zM288 160C288 142.3 302.3 128 320 128L544 128C561.7 128 576 142.3 576 160C576 177.7 561.7 192 544 192L320 192C302.3 192 288 177.7 288 160zM288 320C288 302.3 302.3 288 320 288L544 288C561.7 288 576 302.3 576 320C576 337.7 561.7 352 544 352L320 352C302.3 352 288 337.7 288 320zM224 480C224 462.3 238.3 448 256 448L544 448C561.7 448 576 462.3 576 480C576 497.7 561.7 512 544 512L256 512C238.3 512 224 497.7 224 480zM128 440C150.1 440 168 457.9 168 480C168 502.1 150.1 520 128 520C105.9 520 88 502.1 88 480C88 457.9 105.9 440 128 440z'/></svg></div>Outcomes</a></div>";
+                                            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill='#A8ADB8' d='M197.8 100.3C208.7 107.9 211.3 122.9 203.7 133.7L147.7 213.7C143.6 219.5 137.2 223.2 130.1 223.8C123 224.4 116 222 111 217L71 177C61.7 167.6 61.7 152.4 71 143C80.3 133.6 95.6 133.7 105 143L124.8 162.8L164.4 106.2C172 95.3 187 92.7 197.8 100.3zM197.8 260.3C208.7 267.9 211.3 282.9 203.7 293.7L147.7 373.7C143.6 379.5 137.2 383.2 130.1 383.8C123 384.4 116 382 111 377L71 337C61.6 327.6 61.6 312.4 71 303.1C80.4 293.8 95.6 293.7 104.9 303.1L124.7 322.9L164.3 266.3C171.9 255.4 186.9 252.8 197.7 260.4zM288 160C288 142.3 302.3 128 320 128L544 128C561.7 128 576 142.3 576 160C576 177.7 561.7 192 544 192L320 192C302.3 192 288 177.7 288 160zM288 320C288 302.3 302.3 288 320 288L544 288C561.7 288 576 320C576 337.7 561.7 352 544 352L320 352C302.3 352 288 337.7 288 320zM224 480C224 462.3 238.3 448 256 448L544 448C561.7 448 576 462.3 576 480C576 497.7 561.7 512 544 512L256 512C238.3 512 224 497.7 224 480zM128 440C150.1 440 168 457.9 168 480C168 502.1 150.1 520 128 520C105.9 520 88 502.1 88 480C88 457.9 105.9 440 128 440z'/></svg></div>Outcomes</a></div>";
                         } else { $outcomes = ""; }
                         $rubrics = "<a href='{$row['rubrics']}'><div class='material-icon'>
                                             <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill='#A8ADB8' d='M480 160L352 160L352 288L480 288L480 160zM544 288L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 160C96 124.7 124.7 96 160 96L480 96C515.3 96 544 124.7 544 160L544 288zM160 352L160 480L288 480L288 352L160 352zM288 288L288 160L160 160L160 288L288 288zM352 352L352 480L480 480L480 352L352 352z'/></svg></div>Rubrics</a>";
@@ -87,6 +105,32 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                                     {$outcomes}
                                     <div class='material-item'>{$rubrics}</div>
                                 </div>";
+
+                    case 'assignmentsHeader':
+                        return "<p class='courseMaterials-header'><strong>Assignments</strong></p>";
+
+                    case 'assignments':
+                        $assignments = $row['assignments'] ?? [];
+                        if (empty($assignments)) return '<em>No assignments posted</em>';
+
+                        $items = array_map(function ($asm) {
+                            $viewUrl = buildURL('assignment_view.php', ['gibbonAssignmentID' => $asm['gibbonAssignmentID']]);
+                            $dueDate = htmlspecialchars($asm['dueDate'] ?? '');
+                            $points = htmlspecialchars($asm['points'] ?? '0');
+                            $name = htmlspecialchars($asm['name']);
+                            $status = htmlspecialchars($asm['status'] ?? 'Active');
+
+                            return "<a href='{$viewUrl}' class='material-item' style='margin-right:10px;'>
+                                        <div class='material-icon'>
+                                            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>
+                                                <path fill='#A8ADB8' d='M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30-30c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z'/>
+                                            </svg>
+                                        </div>
+                                        <span><strong>{$name}</strong> <small style='opacity:0.8;'>({$points} pts • Due {$dueDate})</small></span>
+                                    </a>";
+                        }, $assignments);
+
+                        return "<div class='materials-row'>" . implode('', $items) . "</div>";
 
                     case 'materialsHeader': 
                         return "<p class='courseMaterials-header'><strong>Course Materials</strong></p>";
@@ -125,9 +169,21 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                             ->modalWindow();
                     }
                 }
+                if ($row['rowType'] === 'assignmentsHeader') {
+                    if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assignment_add.php')) {
+                        $firstClassID = $row['classes'][0]['classID'] ?? null;
+                        $actions->addAction('edit', __('Edit'), 'Edit Assignments')
+                            ->setURL('/fullscreen.php')
+                            ->addParam('q', '/modules/Courses and Classes/assignment_manage.php')
+                            ->addParam('gibbonCourseID', $row['gibbonCourseID'])
+                            ->addParam('gibbonCourseClassID', $firstClassID)
+                            ->directLink(true)
+                            ->modalWindow();
+                    }
+                }
                 if ($row['rowType'] === 'externalCode') {
-                    if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/materials_edit.php')) {
-                        $actions->addAction('edit', __('Edit'), 'Edit External Course Code')
+                    if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/externalCourseCode_edit.php')) {
+                        $actions->addAction('edit', __('Edit'), 'Edit Course Catalog')
                             ->setURL('/fullscreen.php')
                             ->addParam('q', '/modules/Courses and Classes/externalCourseCode_edit.php')
                             ->addParam('gibbonCourseID', $row['gibbonCourseID'])
@@ -150,6 +206,12 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                 echo $table->render($courseRows);
             }
 
-        };
-    };
+        }
+
+        if ($canOpenOtherCourses) {
+            $otherCoursesUrl = $session->get('absoluteURL').'/fullscreen.php?q=/modules/Courses and Classes/courses_manage.php&width=720&height=360';
+            echo '<p><a href="'.htmlspecialchars($otherCoursesUrl).'" class="thickbox">'.__('Other Courses').'</a></p>';
+        }
+    }
 ?>
+

@@ -1,10 +1,105 @@
 <?php
+use Gibbon\Contracts\Database\Connection;
 
-use Gibbon\Database\Connection;
+// PSR-4 Autoloader for module classes under src/
+spl_autoload_register(function ($class) {
 
-require_once __DIR__ . '/src/Domain/CourseGateway.php';
-require_once __DIR__ . '/src/Domain/ClassGateway.php';
-require_once __DIR__ . '/src/Tables/CourseOverviewTable.php';
+
+    $prefix = 'Gibbon\\Module\\CoursesAndClasses\\';
+    $baseDir = __DIR__ . '/src/';
+
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+
+    if (file_exists($file)) {
+        require_once $file;
+    }
+});
+
+function coursesAndClassesCanSubmitAssignment($session): bool
+{
+    return $session->get('gibbonRoleIDCurrentCategory') === 'Student';
+}
+
+function checkAndMigrateCoursesAndClassesSchema($pdo)
+{
+    try {
+        $table = $pdo->selectOne("SHOW TABLES LIKE 'gibbonCoursesAndClasses'");
+        if (empty($table)) {
+            return;
+        }
+    } catch (Exception $e) {
+        return;
+    }
+
+    $columns = [];
+    try {
+        $columnRows = $pdo->select("SHOW COLUMNS FROM `gibbonCoursesAndClasses`")->fetchAll();
+        foreach ($columnRows as $column) {
+            $columns[$column['Field']] = true;
+        }
+    } catch (Exception $e) {
+        return;
+    }
+
+    if (empty($columns['courseCode'])) {
+        $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` ADD COLUMN `courseCode` VARCHAR(60) DEFAULT NULL AFTER `gibbonCourseID`");
+    }
+
+    if (empty($columns['credits'])) {
+        $after = !empty($columns['externalCourseCode']) ? ' AFTER `externalCourseCode`' : '';
+        $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` ADD COLUMN `credits` DECIMAL(4,2) NOT NULL DEFAULT 0.00{$after}");
+    }
+
+    $pdo->statement("UPDATE gibbonCoursesAndClasses AS cac
+        INNER JOIN gibbonCourse AS c ON c.gibbonCourseID = cac.gibbonCourseID
+        SET cac.courseCode = c.nameShort
+        WHERE cac.courseCode IS NULL OR cac.courseCode = ''");
+
+    $indexes = [];
+    $foreignKeys = [];
+    try {
+        $indexRows = $pdo->select("SHOW INDEX FROM `gibbonCoursesAndClasses`")->fetchAll();
+        foreach ($indexRows as $index) {
+            $indexes[$index['Key_name']] = true;
+        }
+    } catch (Exception $e) {
+        $indexes = [];
+    }
+
+    try {
+        $fkRows = $pdo->select("SELECT CONSTRAINT_NAME
+            FROM information_schema.TABLE_CONSTRAINTS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'gibbonCoursesAndClasses'
+            AND CONSTRAINT_TYPE = 'FOREIGN KEY'")->fetchAll();
+        foreach ($fkRows as $fk) {
+            $foreignKeys[$fk['CONSTRAINT_NAME']] = true;
+        }
+    } catch (Exception $e) {
+        $foreignKeys = [];
+    }
+
+    if (!empty($foreignKeys['gibbonCoursesAndClasses_ibfk_1'])) {
+        $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` DROP FOREIGN KEY `gibbonCoursesAndClasses_ibfk_1`");
+    }
+
+    $pdo->statement("DELETE cac FROM gibbonCoursesAndClasses cac
+        INNER JOIN gibbonCoursesAndClasses keep
+            ON keep.courseCode = cac.courseCode
+            AND keep.gibbonCoursesAndClassesID > cac.gibbonCoursesAndClassesID
+        WHERE cac.courseCode IS NOT NULL AND cac.courseCode <> ''");
+
+    if (empty($indexes['courseCode'])) {
+        $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` ADD UNIQUE KEY `courseCode` (`courseCode`)");
+    }
+}
+
 
 function getClassInfoByCourse(Connection $connection, $courseID): array {
     $sql = "SELECT gibbonCourseClassID, name AS classNameFull FROM gibbonCourseClass WHERE gibbonCourseID = :courseID ORDER BY name";
@@ -43,7 +138,8 @@ function buildURL(string $script, array $params = [], ?string $module = null): s
     global $session;
 
     $baseURL = $session->get('absoluteURL') . '/index.php';
-    $path = '/modules/' . ($module ?? $session->get('module')) . '/' . $script;
+    $moduleName = $module ?? $session->get('module') ?? 'Courses and Classes';
+    $path = '/modules/' . $moduleName . '/' . $script;
 
     // 'q' becomes the core routing param
     $query = array_merge(['q' => $path], $params);
@@ -52,7 +148,7 @@ function buildURL(string $script, array $params = [], ?string $module = null): s
     return $baseURL . '?' . $queryString;
 }
 
-function collapseByCourse(array $rows, array $resources, string $guid, array $classMap): array {
+function collapseByCourse(array $rows, array $resources, string $guid, array $classMap, array $assignmentsMap = []): array {
     $grouped = [];
 
     foreach ($rows as $row) {
@@ -74,7 +170,9 @@ function collapseByCourse(array $rows, array $resources, string $guid, array $cl
                 'gibbonCourseID' => $row['gibbonCourseID'],
                 'courseNameFull' => $row['courseNameFull'] ?? '[Unknown Name]',
                 'externalCourseCode' => $row['externalCourseCode'] ?? '',
+                'credits' => $row['credits'] ?? 0,
                 'materials' => $uniqueFiles,
+                'assignments' => $assignmentsMap[$row['gibbonCourseID']] ?? [],
                 'classes' => []
             ];
         }
@@ -116,6 +214,7 @@ function expandCoursesToRows(array $courses): array {
             'rowType' => 'externalCode',
             'courseName' => $course['courseName'],
             'externalCourseCode' => $course['externalCourseCode'] ?? '',
+            'credits' => $course['credits'] ?? 0,
             'gibbonCourseID' => $course['gibbonCourseID'],
         ];
 
@@ -125,6 +224,21 @@ function expandCoursesToRows(array $courses): array {
             'units' => "index.php?q=%2Fmodules%2FPlanner%2Funits.php&viewBy=class&gibbonCourseID={$course['gibbonCourseID']}&Go=Go",
             'outcomes' => "index.php?q=%2Fmodules%2FPlanner%2Foutcomes.php&gibbonCourseID={$course['gibbonCourseID']}",
             'rubrics' => "index.php?q=/modules/Rubrics/rubrics_view.php&gibbonCourseID={$course['gibbonCourseID']}",
+            'classes' => $course['classes'],
+        ];
+
+        $rows[] = [
+            'rowType' => 'assignmentsHeader',
+            'courseName' => $course['courseName'],
+            'gibbonCourseID' => $course['gibbonCourseID'],
+            'classes' => $course['classes'],
+        ];
+
+        $rows[] = [
+            'rowType' => 'assignments',
+            'courseName' => $course['courseName'],
+            'gibbonCourseID' => $course['gibbonCourseID'],
+            'assignments' => $course['assignments'] ?? [],
             'classes' => $course['classes'],
         ];
 
@@ -143,3 +257,4 @@ function expandCoursesToRows(array $courses): array {
 
     return $rows;
 }
+

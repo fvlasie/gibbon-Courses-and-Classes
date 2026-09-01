@@ -1,5 +1,8 @@
 <?php
-require_once __DIR__ . '/../../gibbon.php';
+
+if (!isset($container)) {
+    require_once __DIR__.'/../../gibbon.php';
+}
 require_once 'moduleFunctions.php';
 
 use Gibbon\Forms\Form;
@@ -28,7 +31,7 @@ $form->setAttribute('hx-on', 'htmx:afterRequest: document.getElementById("upload
 
 $row = $form->addRow();
 $row->addLabel('title',__('Title'));
-$row->addTextField('title')->isRequired();
+$row->addTextField('title')->required();
 
 $row = $form->addRow();
 $row->addLabel('description',__('Description'));
@@ -36,7 +39,7 @@ $row->addTextField('description');
 
 $row = $form->addRow();
 $row->addLabel('upload',__('Upload'));
-$row->addFileUpload('file')->isRequired();
+$row->addFileUpload('file')->required();
 
 $row = $form->addRow();
 $row->addSubmit(__('Add Material'));

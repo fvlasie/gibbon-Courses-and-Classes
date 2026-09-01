@@ -26,7 +26,6 @@ $gateway = new CourseMaterialsGateway($connection);
 
 // Fetch material to confirm existence and get file path
 $material = $gateway->getResourceByID($materialID);
-error_log(print_r($material, true));
 
 if ($material === false) {
     echo "<div class='warning'>".__('Material not found.')."</div>";
@@ -52,7 +51,6 @@ if (
 try {
     $deleted = $gateway->deleteResource($materialID);
 } catch (Exception $e) {
-    error_log('Delete error: ' . $e->getMessage());
     echo "<div class='error'>".__('Delete exception: ').$e->getMessage()."</div>";
     exit;
 }
