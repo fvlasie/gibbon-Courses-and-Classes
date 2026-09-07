@@ -1,5 +1,4 @@
 <?php
-use Gibbon\Contracts\Database\Connection;
 
 // PSR-4 Autoloader for module classes under src/
 spl_autoload_register(function ($class) {
@@ -101,23 +100,6 @@ function checkAndMigrateCoursesAndClassesSchema($pdo)
 }
 
 
-function getClassInfoByCourse(Connection $connection, $courseID): array {
-    $sql = "SELECT gibbonCourseClassID, name AS classNameFull FROM gibbonCourseClass WHERE gibbonCourseID = :courseID ORDER BY name";
-    $params = ['courseID' => $courseID];
-    $result = $connection->executeQuery($params, $sql);
-    $rows = $result->fetchAll();
-
-    $classes = [];
-    foreach ($rows as $row) {
-        $classes[$row['classNameFull']] = [
-            'id' => $row['gibbonCourseClassID'],
-            'name' => $row['classNameFull']
-        ];
-    }
-
-    return $classes;
-}
-
 function getResourceLink($guid, $gibbonResourceID, $type, $name, $content) {
     global $session;
 
@@ -148,7 +130,23 @@ function buildURL(string $script, array $params = [], ?string $module = null): s
     return $baseURL . '?' . $queryString;
 }
 
-function collapseByCourse(array $rows, array $resources, string $guid, array $classMap, array $assignmentsMap = []): array {
+/**
+ * Match Gibbon home / related-class links: Departments class view keyed by ID.
+ */
+function buildDepartmentClassURL(int $gibbonCourseClassID, ?int $gibbonCourseID = null, ?int $gibbonDepartmentID = null): string
+{
+    $params = ['gibbonCourseClassID' => $gibbonCourseClassID];
+    if (!empty($gibbonCourseID)) {
+        $params['gibbonCourseID'] = $gibbonCourseID;
+    }
+    if (!empty($gibbonDepartmentID)) {
+        $params['gibbonDepartmentID'] = $gibbonDepartmentID;
+    }
+
+    return buildURL('department_course_class.php', $params, 'Departments');
+}
+
+function collapseByCourse(array $rows, array $resources, string $guid, array $assignmentsMap = []): array {
     $grouped = [];
 
     foreach ($rows as $row) {
@@ -168,6 +166,7 @@ function collapseByCourse(array $rows, array $resources, string $guid, array $cl
             $grouped[$code] = [
                 'courseName' => $code,
                 'gibbonCourseID' => $row['gibbonCourseID'],
+                'gibbonDepartmentID' => $row['gibbonDepartmentID'] ?? null,
                 'courseNameFull' => $row['courseNameFull'] ?? '[Unknown Name]',
                 'externalCourseCode' => $row['externalCourseCode'] ?? '',
                 'credits' => $row['credits'] ?? 0,
@@ -177,21 +176,31 @@ function collapseByCourse(array $rows, array $resources, string $guid, array $cl
             ];
         }
 
-        if (!array_filter($grouped[$code]['classes'], fn($c) => $c['name'] === $className)) {
-            $classInfo = $classMap[$row['gibbonCourseID']][$className] ?? [];
+        $classID = (int)($row['gibbonCourseClassID'] ?? 0);
+        $alreadyListed = array_filter(
+            $grouped[$code]['classes'],
+            fn($c) => ($classID > 0 && (int)$c['classID'] === $classID) || $c['name'] === $className
+        );
 
+        if (!$alreadyListed) {
             $grouped[$code]['classes'][] = [
                 'name' => $className,
-                'fullName' => $code . '.' . $className ?? $className,
-                'classID' => $classInfo['id'] ?? null,
+                'fullName' => $code.'.'.$className,
+                'classID' => $classID > 0 ? $classID : null,
+                'gibbonCourseID' => (int)($row['gibbonCourseID'] ?? 0) ?: null,
+                'gibbonDepartmentID' => (int)($row['gibbonDepartmentID'] ?? 0) ?: null,
             ];
 
-            // Now rebuild the links from the updated list
             $classes = array_map(function ($class) {
-                $url = buildURL('class_view.php', ['gibbonCourseClassID' => $class['classID']]);
-                return $class['classID']
-                    ? "<a href='{$url}'>" . htmlspecialchars($class['fullName']) . "</a>"
-                    : htmlspecialchars($class['fullName']);
+                if (empty($class['classID'])) {
+                    return htmlspecialchars($class['fullName']);
+                }
+                $url = buildDepartmentClassURL(
+                    (int)$class['classID'],
+                    $class['gibbonCourseID'] ?? null,
+                    $class['gibbonDepartmentID'] ?? null
+                );
+                return "<a href='{$url}'>".htmlspecialchars($class['fullName'])."</a>";
             }, $grouped[$code]['classes']);
 
             $grouped[$code]['classLinks'] = implode(', ', $classes);

@@ -26,7 +26,6 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
     $page->addError(__m('You do not have access to this action.'));
 
 } else {
-        $classMap = [];
         $connection = $container->get(Connection::class);
         $gateway = new CourseGateway($connection);
         $coursesArray = $gateway->queryRawCoursesByPerson($personID);
@@ -58,11 +57,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                 $assignmentsMap[$cID] = $assignmentGateway->getAssignmentsByCourse((int)$cID);
             }
 
-            $classMap = [];
-                foreach ($courseIDs as $courseID) {
-                    $classMap[$courseID] = getClassInfoByCourse($connection, $courseID);
-                }
-            $collapsed = collapseByCourse($courses->toArray(), $resources, $personID, $classMap, $assignmentsMap);
+            $collapsed = collapseByCourse($courses->toArray(), $resources, $personID, $assignmentsMap);
 
             $data = expandCoursesToRows($collapsed);
             echo "<h2>" . __('📚 My Courses') . "</h2>";
@@ -95,8 +90,16 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                         $rubrics = "<a href='{$row['rubrics']}'><div class='material-icon'>
                                             <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill='#A8ADB8' d='M480 160L352 160L352 288L480 288L480 160zM544 288L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 160C96 124.7 124.7 96 160 96L480 96C515.3 96 544 124.7 544 160L544 288zM160 352L160 480L288 480L288 352L160 352zM288 288L288 160L160 160L160 288L288 288zM352 352L352 480L480 480L480 352L352 352z'/></svg></div>Rubrics</a>";
                         $classes = array_map(function ($class) {
-                            $url = buildURL('department_course_class.php', ['gibbonCourseClassID' => $class['classID']], 'Departments');
-                            return "<a href='{$url}'>" . htmlspecialchars($class['fullName']) . "</a>";
+                            $label = htmlspecialchars($class['fullName']);
+                            if (empty($class['classID'])) {
+                                return $label;
+                            }
+                            $url = buildDepartmentClassURL(
+                                (int)$class['classID'],
+                                $class['gibbonCourseID'] ?? null,
+                                $class['gibbonDepartmentID'] ?? null
+                            );
+                            return "<a href='{$url}'>{$label}</a>";
                         }, $row['classes'] ?? []);
                         $classLinks = !empty($classes) ? implode(' &nbsp; ', $classes) : '<em>No classes</em>';
                         return "<div class='classes'><strong>Classes:</strong> {$classLinks}</div>
@@ -171,14 +174,22 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                 }
                 if ($row['rowType'] === 'assignmentsHeader') {
                     if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assignment_add.php')) {
-                        $firstClassID = $row['classes'][0]['classID'] ?? null;
-                        $actions->addAction('edit', __('Edit'), 'Edit Assignments')
+                        $firstClassID = 0;
+                        foreach ($row['classes'] ?? [] as $class) {
+                            if (!empty($class['classID'])) {
+                                $firstClassID = (int)$class['classID'];
+                                break;
+                            }
+                        }
+                        $editAssignments = $actions->addAction('edit', __('Edit'), 'Edit Assignments')
                             ->setURL('/fullscreen.php')
                             ->addParam('q', '/modules/Courses and Classes/assignment_manage.php')
                             ->addParam('gibbonCourseID', $row['gibbonCourseID'])
-                            ->addParam('gibbonCourseClassID', $firstClassID)
                             ->directLink(true)
                             ->modalWindow();
+                        if ($firstClassID > 0) {
+                            $editAssignments->addParam('gibbonCourseClassID', $firstClassID);
+                        }
                     }
                 }
                 if ($row['rowType'] === 'externalCode') {
