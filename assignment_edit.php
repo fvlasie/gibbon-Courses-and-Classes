@@ -60,5 +60,5 @@ $assignmentForm = new AssignmentForm($form, new Assignment($assignmentData));
 echo $assignmentForm->build()->getOutput();
 
 if ($fromManage) {
-    echo '<p><a href="#" hx-get="'.htmlspecialchars($manageUrl).'" hx-target="#modalContent" hx-swap="innerHTML">'.__('Back to Assignments').'</a></p>';
+    echo '<p><a href="#" hx-get="'.htmlspecialchars($manageUrl).'" hx-target="#modalContent" hx-swap="innerHTML">'.__('Back to Course Assignments').'</a></p>';
 }

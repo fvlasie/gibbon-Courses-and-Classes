@@ -10,7 +10,7 @@ require_once __DIR__.'/moduleFunctions.php';
 if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assignment_list.php') == false) {
     $page->addError(__('You do not have access to this action.'));
 } else {
-    $page->breadcrumbs->add(__('My Assignments'));
+    $page->breadcrumbs->add(__('My Course Assignments'));
 
     $gibbonPersonID = (int)$session->get('gibbonPersonID');
     $gibbonSchoolYearID = (int)$session->get('gibbonSchoolYearID');

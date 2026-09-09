@@ -10,7 +10,7 @@ class StudentAssignmentListTable
     public static function create(DataSet $data): DataTable
     {
         $table = DataTable::create('studentAssignmentTable')->withData($data);
-        $table->setTitle(__('My Assignments'));
+        $table->setTitle(__('My Course Assignments'));
 
         $table->addColumn('courseName', __('Course'));
         $table->addColumn('assignmentName', __('Assignment'));

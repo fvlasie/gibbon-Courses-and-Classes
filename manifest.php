@@ -6,7 +6,7 @@ $name        = 'Courses and Classes';
 $description = 'A Course-centric workflow for Gibbon.';
 $entryURL    = 'coursesAndClasses_view.php';
 $type        = 'Additional';
-$version     = '2.2';
+$version     = '2.3';
 $author      = 'Father Vlasie';
 $url = "https://github.com/fvlasie/gibbon-Courses-and-Classes";
 $category = 'Learn';
@@ -71,9 +71,9 @@ $actionRows[2] = [
 ];
 
 $actionRows[3] = [
-    'name' => 'My Assignments',
+    'name' => 'My Course Assignments',
     'precedence' => '2',
-    'category' => 'Assignments',
+    'category' => 'Course Assignments',
     'description' => 'Allows students and staff to view assignments.',
     'URLList' => 'assignment_list.php, assignment_view.php, assignment_submit.php, assignment_submit_process.php',
     'entryURL' => 'assignment_list.php',
@@ -89,9 +89,9 @@ $actionRows[3] = [
 ];
 
 $actionRows[4] = [
-    'name' => 'Manage Assignments',
+    'name' => 'Manage Course Assignments',
     'precedence' => '3',
-    'category' => 'Assignments',
+    'category' => 'Course Assignments',
     'description' => 'Allows teachers and admins to create, edit, and grade assignments.',
     'URLList' => 'coursesAndClasses_view.php, assignment_add.php, assignment_edit.php, assignment_process.php, assignment_view.php, assignment_grade.php, assignment_grade_process.php, assignment_manage.php, assignment_table.php, assignment_delete.php',
     'entryURL' => 'coursesAndClasses_view.php',

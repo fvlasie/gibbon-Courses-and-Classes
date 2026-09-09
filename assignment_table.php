@@ -13,7 +13,7 @@ $absoluteURL = $session->get('absoluteURL');
 $modulePath = $absoluteURL.'/modules/Courses and Classes';
 
 $table = DataTable::create('courseAssignments', null, ['class' => 'w-full']);
-$table->setTitle(__('Assignments').(!empty($courseName) ? ': '.htmlspecialchars($courseName) : ''));
+$table->setTitle(__('Course Assignments').(!empty($courseName) ? ': '.htmlspecialchars($courseName) : ''));
 
 $table->addHeaderAction('add', __('Add'))
     ->setURL('#')

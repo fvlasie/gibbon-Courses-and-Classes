@@ -110,7 +110,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                                 </div>";
 
                     case 'assignmentsHeader':
-                        return "<p class='courseMaterials-header'><strong>Assignments</strong></p>";
+                        return "<p class='courseMaterials-header'><strong>Course Assignments</strong></p>";
 
                     case 'assignments':
                         $assignments = $row['assignments'] ?? [];
@@ -181,7 +181,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
                                 break;
                             }
                         }
-                        $editAssignments = $actions->addAction('edit', __('Edit'), 'Edit Assignments')
+                        $editAssignments = $actions->addAction('edit', __('Edit'), 'Edit Course Assignments')
                             ->setURL('/fullscreen.php')
                             ->addParam('q', '/modules/Courses and Classes/assignment_manage.php')
                             ->addParam('gibbonCourseID', $row['gibbonCourseID'])
