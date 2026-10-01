@@ -64,7 +64,7 @@ $row = $form->addRow();
 
 $row = $form->addRow();
     $row->addLabel('credits', __('Credits'))->description(__('Credit hours used on transcripts. Saved by course code so it carries into later school years.'));
-    $row->addNumber('credits')->decimalPlaces(2)->minimum(0)->maximum(99.99)->setValue($catalog['credits'] ?? '0.00')->required();
+    $row->addNumber('credits')->decimalPlaces(2)->minimum(0)->maximum(99.99)->setValue($catalog['credits'] ?? '3.00')->required();
 
 $row = $form->addRow();
     $row->addSubmit();

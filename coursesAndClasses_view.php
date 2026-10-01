@@ -76,7 +76,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
 
                     case 'externalCode':
                         $external = !empty($row['externalCourseCode']) ? htmlspecialchars($row['externalCourseCode']) : __('Not set');
-                        $credits = number_format((float)($row['credits'] ?? 0), 2);
+                        $credits = number_format((float)($row['credits'] ?? 3), 2);
                         return __('External Course Code').': '.$external.' &nbsp;|&nbsp; '.__('Credits').': '.$credits;
 
                     case 'details':

@@ -52,7 +52,7 @@ function checkAndMigrateCoursesAndClassesSchema($pdo)
 
     if (empty($columns['credits'])) {
         $after = !empty($columns['externalCourseCode']) ? ' AFTER `externalCourseCode`' : '';
-        $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` ADD COLUMN `credits` DECIMAL(4,2) NOT NULL DEFAULT 0.00{$after}");
+        $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` ADD COLUMN `credits` DECIMAL(4,2) NOT NULL DEFAULT 3.00{$after}");
     }
 
     $pdo->statement("UPDATE gibbonCoursesAndClasses AS cac
@@ -97,6 +97,14 @@ function checkAndMigrateCoursesAndClassesSchema($pdo)
     if (empty($indexes['courseCode'])) {
         $pdo->statement("ALTER TABLE `gibbonCoursesAndClasses` ADD UNIQUE KEY `courseCode` (`courseCode`)");
     }
+
+    // Give courses created since the last visit a catalog entry with the default credits; existing entries are never changed.
+    $pdo->statement("INSERT IGNORE INTO gibbonCoursesAndClasses (gibbonCourseID, courseCode, credits)
+        SELECT MAX(c.gibbonCourseID), c.nameShort, 3.00
+        FROM gibbonCourse AS c
+        LEFT JOIN gibbonCoursesAndClasses AS cac ON cac.courseCode = c.nameShort
+        WHERE cac.gibbonCoursesAndClassesID IS NULL AND c.nameShort <> ''
+        GROUP BY c.nameShort");
 }
 
 

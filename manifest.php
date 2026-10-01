@@ -6,7 +6,7 @@ $name        = 'Courses and Classes';
 $description = 'A Course-centric workflow for Gibbon.';
 $entryURL    = 'coursesAndClasses_view.php';
 $type        = 'Additional';
-$version     = '2.4';
+$version     = '2.5';
 $author      = 'Father Vlasie';
 $url = "https://github.com/fvlasie/gibbon-Courses-and-Classes";
 $category = 'Learn';
@@ -151,7 +151,7 @@ $moduleTables[] = "CREATE TABLE `gibbonCoursesAndClasses` (
     `gibbonCourseID` INT(8) UNSIGNED ZEROFILL DEFAULT NULL,
     `courseCode` VARCHAR(60) NOT NULL,
     `externalCourseCode` VARCHAR(255) DEFAULT NULL,
-    `credits` DECIMAL(4,2) NOT NULL DEFAULT 0.00,
+    `credits` DECIMAL(4,2) NOT NULL DEFAULT 3.00,
     `dateModified` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`gibbonCoursesAndClassesID`),
     UNIQUE KEY `courseCode` (`courseCode`),

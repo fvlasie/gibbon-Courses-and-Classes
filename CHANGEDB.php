@@ -28,3 +28,12 @@ JOIN gibbonAction ON gibbonAction.name='Manage Course Catalog'
 JOIN gibbonModule ON gibbonModule.gibbonModuleID=gibbonAction.gibbonModuleID
 WHERE gibbonModule.name='Courses and Classes' AND gibbonRole.name='Teacher';end
 ";
+
+//v2.5
+++$count;
+$sql[$count][0] = '2.5';
+$sql[$count][1] = "
+ALTER TABLE `gibbonCoursesAndClasses` MODIFY `credits` DECIMAL(4,2) NOT NULL DEFAULT 3.00;end
+UPDATE gibbonCoursesAndClasses SET credits=3.00 WHERE credits=0;end
+INSERT IGNORE INTO gibbonCoursesAndClasses (gibbonCourseID, courseCode, credits) SELECT MAX(gibbonCourse.gibbonCourseID), gibbonCourse.nameShort, 3.00 FROM gibbonCourse LEFT JOIN gibbonCoursesAndClasses ON gibbonCoursesAndClasses.courseCode=gibbonCourse.nameShort WHERE gibbonCoursesAndClasses.gibbonCoursesAndClassesID IS NULL AND gibbonCourse.nameShort<>'' GROUP BY gibbonCourse.nameShort;end
+";
