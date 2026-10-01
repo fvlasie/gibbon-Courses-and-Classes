@@ -39,6 +39,20 @@ class AssignmentSubmissionGateway extends QueryableGateway
         return $result->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getSubmissionsByAssignmentAndPerson(int $assignmentID, int $personID): array
+    {
+        $sql = "
+            SELECT s.*
+            FROM gibbonAssignmentSubmission AS s
+            WHERE s.gibbonAssignmentID = :assignmentID
+            AND s.gibbonPersonID = :personID
+            ORDER BY s.submittedDate DESC, s.submittedTime DESC
+        ";
+        $params = ['assignmentID' => $assignmentID, 'personID' => $personID];
+        $result = $this->db()->executeQuery($params, $sql);
+        return $result->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getSubmissionsByStudent(int $personID): array
     {
         $sql = "

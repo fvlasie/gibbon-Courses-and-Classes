@@ -37,3 +37,10 @@ ALTER TABLE `gibbonCoursesAndClasses` MODIFY `credits` DECIMAL(4,2) NOT NULL DEF
 UPDATE gibbonCoursesAndClasses SET credits=3.00 WHERE credits=0;end
 INSERT IGNORE INTO gibbonCoursesAndClasses (gibbonCourseID, courseCode, credits) SELECT MAX(gibbonCourse.gibbonCourseID), gibbonCourse.nameShort, 3.00 FROM gibbonCourse LEFT JOIN gibbonCoursesAndClasses ON gibbonCoursesAndClasses.courseCode=gibbonCourse.nameShort WHERE gibbonCoursesAndClasses.gibbonCoursesAndClassesID IS NULL AND gibbonCourse.nameShort<>'' GROUP BY gibbonCourse.nameShort;end
 ";
+
+//v2.6
+++$count;
+$sql[$count][0] = '2.6';
+$sql[$count][1] = "
+UPDATE gibbonAction SET URLList='coursesAndClasses_view.php, assignment_list.php, assignment_view.php' WHERE name='Overview' AND gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes');end
+";

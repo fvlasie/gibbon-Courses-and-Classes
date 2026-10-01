@@ -52,9 +52,14 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
             $resources = $materialsGateway->selectByCourseNames($courseNames);
 
             $assignmentGateway = new AssignmentGateway($connection);
+            $canManageAssignments = isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assignment_add.php');
             $assignmentsMap = [];
             foreach ($courseIDs as $cID) {
-                $assignmentsMap[$cID] = $assignmentGateway->getAssignmentsByCourse((int)$cID);
+                $courseAssignments = $assignmentGateway->getAssignmentsByCourse((int)$cID);
+                if (!$canManageAssignments) {
+                    $courseAssignments = array_values(array_filter($courseAssignments, fn($a) => ($a['status'] ?? '') !== 'Draft'));
+                }
+                $assignmentsMap[$cID] = $courseAssignments;
             }
 
             $collapsed = collapseByCourse($courses->toArray(), $resources, $personID, $assignmentsMap);

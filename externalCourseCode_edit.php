@@ -1,6 +1,7 @@
 <?php
 
 use Gibbon\Forms\Form;
+use Gibbon\Module\CoursesAndClasses\Domain\CourseGateway;
 
 if (!isset($container)) {
     require_once __DIR__ . '/../../gibbon.php';
@@ -70,25 +71,19 @@ $row = $form->addRow();
     $row->addSubmit();
 
 if (!empty($_POST['gibbonCourseID'])) {
-    $newCode = trim((string)($_POST['externalCourseCode'] ?? ''));
-    $credits = round((float)($_POST['credits'] ?? 0), 2);
-    $postedCourseCode = trim((string)($_POST['courseCode'] ?? $courseCode));
+    $returnURL = $session->get('absoluteURL').'/index.php?q=/modules/Courses and Classes/coursesAndClasses_view.php';
 
-    $sql = "INSERT INTO gibbonCoursesAndClasses (gibbonCourseID, courseCode, externalCourseCode, credits)
-            VALUES (:gibbonCourseID, :courseCode, :externalCourseCode, :credits)
-            ON DUPLICATE KEY UPDATE
-                gibbonCourseID = VALUES(gibbonCourseID),
-                externalCourseCode = VALUES(externalCourseCode),
-                credits = VALUES(credits)";
-    $stmt = $connection2->prepare($sql);
-    $stmt->execute([
-        'gibbonCourseID' => $courseID,
-        'courseCode' => $postedCourseCode,
-        'externalCourseCode' => $newCode !== '' ? $newCode : null,
-        'credits' => $credits,
-    ]);
+    try {
+        $container->get(CourseGateway::class)->upsertCourseCatalog($courseCode, [
+            'externalCourseCode' => $_POST['externalCourseCode'] ?? '',
+            'credits' => $_POST['credits'] ?? '',
+        ], $courseID);
+    } catch (\InvalidArgumentException $e) {
+        header('Location: '.$returnURL.'&return=error3');
+        exit;
+    }
 
-    header('Location: '.$session->get('absoluteURL').'/index.php?q=/modules/Courses and Classes/coursesAndClasses_view.php');
+    header('Location: '.$returnURL.'&return=success0');
     exit;
 }
 

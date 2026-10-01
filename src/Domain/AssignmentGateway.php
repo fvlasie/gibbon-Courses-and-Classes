@@ -80,6 +80,8 @@ class AssignmentGateway extends QueryableGateway
                 cc.nameShort AS className,
                 COALESCE(s.status, 'Not Started') AS status,
                 s.grade,
+                s.pointsEarned,
+                s.feedback,
                 s.gibbonAssignmentSubmissionID
             FROM gibbonAssignment AS a
             INNER JOIN gibbonCourseClass AS cc ON a.gibbonCourseClassID = cc.gibbonCourseClassID
@@ -118,6 +120,8 @@ class AssignmentGateway extends QueryableGateway
                 cc.nameShort AS className,
                 a.status AS status,
                 NULL AS grade,
+                NULL AS pointsEarned,
+                NULL AS feedback,
                 NULL AS gibbonAssignmentSubmissionID
             FROM gibbonAssignment AS a
             INNER JOIN gibbonCourseClass AS cc ON a.gibbonCourseClassID = cc.gibbonCourseClassID

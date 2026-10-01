@@ -31,12 +31,21 @@ if (!$assignmentData) {
     return;
 }
  
+$canGrade = isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assignment_grade.php');
+
+if (!$canGrade && ($assignmentData['status'] ?? '') === 'Draft') {
+    $page->addError(__('The specified record cannot be found.'));
+    return;
+}
+
 // Map data to Domain Model
 $assignment = new Assignment($assignmentData);
 
-// Fetch submissions for this assignment
+// Graders see every submission; everyone else only sees their own
 $submissionGateway = new AssignmentSubmissionGateway($connection);
-$submissions = $submissionGateway->getSubmissionsByAssignment($gibbonAssignmentID);
+$submissions = $canGrade
+    ? $submissionGateway->getSubmissionsByAssignment($gibbonAssignmentID)
+    : $submissionGateway->getSubmissionsByAssignmentAndPerson($gibbonAssignmentID, (int)$session->get('gibbonPersonID'));
 
 $page->breadcrumbs
     ->add($session->get('module'))
@@ -82,6 +91,34 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assign
         </div>
     </div>
 
+    <?php if (!$canGrade): ?>
+    <div class="assignment-submissions">
+        <h2><?php echo __('My Submission'); ?></h2>
+        <?php if (empty($submissions)): ?>
+            <p><?php echo __('You have not submitted this assignment yet.'); ?></p>
+        <?php else: ?>
+            <?php foreach ($submissions as $submission): ?>
+                <div class="assignment-details">
+                    <p><strong><?php echo __('Status'); ?>:</strong> <?php echo htmlspecialchars($submission['status']); ?></p>
+                    <p><strong><?php echo __('Submitted'); ?>:</strong> <?php echo htmlspecialchars(trim(($submission['submittedDate'] ?? '').' '.($submission['submittedTime'] ?? ''))); ?></p>
+                    <?php if (!empty($submission['external_doc_id'])): ?>
+                        <p><strong><?php echo __('File'); ?>:</strong>
+                            <a href="<?php echo htmlspecialchars($session->get('absoluteURL').'/'.$submission['external_doc_id']); ?>" target="_blank"><?php echo htmlspecialchars($submission['external_submission_id'] ?: __('File')); ?></a>
+                        </p>
+                    <?php endif; ?>
+                    <?php if (in_array($submission['status'], ['Graded', 'Returned'], true)): ?>
+                        <p><strong><?php echo __('Grade'); ?>:</strong> <?php echo htmlspecialchars($submission['grade'] ?? '-'); ?></p>
+                        <p><strong><?php echo __('Points'); ?>:</strong> <?php echo $submission['pointsEarned'] !== null ? htmlspecialchars($submission['pointsEarned']).' / '.htmlspecialchars($assignment->points) : '-'; ?></p>
+                        <p><strong><?php echo __('Feedback'); ?>:</strong></p>
+                        <div class="assignment-description"><?php echo !empty($submission['feedback']) ? nl2br(htmlspecialchars($submission['feedback'])) : '<em>'.__('No feedback given.').'</em>'; ?></div>
+                    <?php else: ?>
+                        <p><em><?php echo __('Not graded yet.'); ?></em></p>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+    <?php else: ?>
     <div class="assignment-submissions">
         <h2><?php echo __('Submissions'); ?></h2>
         <?php if (empty($submissions)): ?>
@@ -105,7 +142,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assign
                             <td><?php echo htmlspecialchars($submission['studentFirstName'] . ' ' . $submission['studentSurname']); ?></td>
                             <td><?php echo htmlspecialchars($submission['status']); ?></td>
                             <td><?php echo htmlspecialchars($submission['grade'] ?? '-'); ?></td>
-                            <td><?php echo htmlspecialchars($submission['pointsEarned'] ?? '0'); ?></td>
+                            <td><?php echo htmlspecialchars($submission['pointsEarned'] ?? '-'); ?></td>
                             <td><?php echo htmlspecialchars($submission['submittedDate']); ?></td>
                             <td>
                                 <?php if (!empty($submission['external_doc_id'])): ?>
@@ -128,6 +165,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assign
             </table>
         <?php endif; ?>
     </div>
+    <?php endif; ?>
 </div>
 
 

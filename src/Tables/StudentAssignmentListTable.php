@@ -17,6 +17,22 @@ class StudentAssignmentListTable
         $table->addColumn('dueDate', __('Due Date'));
         $table->addColumn('status', __('Status'));
         $table->addColumn('grade', __('Grade'));
+        $table->addColumn('pointsEarned', __('Points'))
+            ->format(function ($row) {
+                if ($row['pointsEarned'] === null || $row['pointsEarned'] === '') {
+                    return '';
+                }
+                return htmlspecialchars((float)$row['pointsEarned'].' / '.(float)$row['points']);
+            });
+        $table->addColumn('feedback', __('Feedback'))
+            ->format(function ($row) {
+                $feedback = trim((string)($row['feedback'] ?? ''));
+                if ($feedback === '') {
+                    return '';
+                }
+                $short = mb_strlen($feedback) > 80 ? mb_substr($feedback, 0, 80).'…' : $feedback;
+                return '<span title="'.htmlspecialchars($feedback).'">'.htmlspecialchars($short).'</span>';
+            });
 
         $table->addActionColumn()
             ->addParam('gibbonAssignmentID')
