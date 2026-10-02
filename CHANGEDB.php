@@ -53,3 +53,10 @@ UPDATE gibbonAction SET URLList='courses_manage.php, courses_manageAjax.php, ext
 DELETE gibbonPermission FROM gibbonPermission JOIN gibbonAction ON gibbonAction.gibbonActionID=gibbonPermission.gibbonActionID WHERE gibbonAction.name='Manage All Courses' AND gibbonAction.gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes') AND gibbonPermission.gibbonRoleID<>1;end
 INSERT IGNORE INTO gibbonPermission (gibbonRoleID, gibbonActionID) SELECT 1, gibbonActionID FROM gibbonAction WHERE name='Manage All Courses' AND gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes');end
 ";
+
+//v2.8
+++$count;
+$sql[$count][0] = '2.8';
+$sql[$count][1] = "
+UPDATE gibbonAction SET category='Registrar' WHERE name='Manage All Courses' AND gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes');end
+";
