@@ -2,6 +2,7 @@
 require_once 'moduleFunctions.php';
 
 use Gibbon\Contracts\Database\Connection;
+use Gibbon\Forms\Form;
 use Gibbon\Module\CoursesAndClasses\Domain\AssignmentGateway;
 use Gibbon\Module\CoursesAndClasses\Domain\AssignmentSubmissionGateway;
 use Gibbon\Module\CoursesAndClasses\Domain\Assignment;
@@ -54,6 +55,7 @@ $page->breadcrumbs
 
 $page->return->addReturns([
     'success0' => __('Your changes were saved successfully.'),
+    'warning1' => __('Some rows were not saved. Points must be a number from 0 up to the assignment maximum, and a grade can be at most 50 characters.'),
     'error3' => __('Please upload a file to submit your assignment.'),
 ]);
 
@@ -120,50 +122,88 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/assign
     </div>
     <?php else: ?>
     <div class="assignment-submissions">
-        <h2><?php echo __('Submissions'); ?></h2>
-        <?php if (empty($submissions)): ?>
-            <p><?php echo __('No submissions yet.'); ?></p>
-        <?php else: ?>
-            <table class="assignment-submissions-table">
-                <thead>
-                    <tr>
-                        <th><?php echo __('Student'); ?></th>
-                        <th><?php echo __('Status'); ?></th>
-                        <th><?php echo __('Grade'); ?></th>
-                        <th><?php echo __('Points'); ?></th>
-                        <th><?php echo __('Submitted'); ?></th>
-                        <th><?php echo __('File'); ?></th>
-                        <th><?php echo __('Actions'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($submissions as $submission): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($submission['studentFirstName'] . ' ' . $submission['studentSurname']); ?></td>
-                            <td><?php echo htmlspecialchars($submission['status']); ?></td>
-                            <td><?php echo htmlspecialchars($submission['grade'] ?? '-'); ?></td>
-                            <td><?php echo htmlspecialchars($submission['pointsEarned'] ?? '-'); ?></td>
-                            <td><?php echo htmlspecialchars($submission['submittedDate']); ?></td>
-                            <td>
-                                <?php if (!empty($submission['external_doc_id'])): ?>
-                                    <a href="<?php echo htmlspecialchars($session->get('absoluteURL').'/'.$submission['external_doc_id']); ?>" target="_blank">
-                                        <?php echo htmlspecialchars($submission['external_submission_id'] ?: __('File')); ?>
-                                    </a>
-                                <?php else: ?>
-                                    —
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php $gradeUrl = buildURL('assignment_grade.php', ['gibbonAssignmentSubmissionID' => $submission['gibbonAssignmentSubmissionID']]); ?>
-                                <a href="<?php echo $gradeUrl; ?>">
-                                    <?php echo __('Grade'); ?>
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
+        <?php
+        $classAssignments = $assignmentGateway->getAssignmentsByClass($assignment->gibbonCourseClassID);
+        usort($classAssignments, function ($left, $right) {
+            $byDate = strcmp((string) $left['dueDate'], (string) $right['dueDate']);
+            return $byDate !== 0 ? $byDate : ((int) $left['gibbonAssignmentID'] <=> (int) $right['gibbonAssignmentID']);
+        });
+        $classAssignmentIDs = array_map('intval', array_column($classAssignments, 'gibbonAssignmentID'));
+        $assignmentIndex = array_search($gibbonAssignmentID, $classAssignmentIDs, true);
+        $neighborParams = ($_GET['show'] ?? '') === 'ungraded' ? ['show' => 'ungraded'] : [];
+        ?>
+        <p class="assignment-neighbors">
+            <?php if ($assignmentIndex !== false && $assignmentIndex > 0): ?>
+                <a href="<?php echo buildURL('assignment_view.php', ['gibbonAssignmentID' => $classAssignmentIDs[$assignmentIndex - 1]] + $neighborParams); ?>"><?php echo __('Previous Assignment'); ?></a>
+            <?php endif; ?>
+            <?php if ($assignmentIndex !== false && $assignmentIndex < count($classAssignmentIDs) - 1): ?>
+                <a href="<?php echo buildURL('assignment_view.php', ['gibbonAssignmentID' => $classAssignmentIDs[$assignmentIndex + 1]] + $neighborParams); ?>"><?php echo __('Next Assignment'); ?></a>
+            <?php endif; ?>
+        </p>
+        <h2><?php echo __('Grade the Class'); ?></h2>
+        <?php
+        $roster = $submissionGateway->getClassRoster($gibbonAssignmentID);
+        $ungradedOnly = ($_GET['show'] ?? '') === 'ungraded';
+        $visible = [];
+        foreach ($roster as $student) {
+            $graded = in_array($student['status'] ?? '', ['Graded', 'Returned'], true);
+            if (!$ungradedOnly || !$graded) {
+                $visible[] = $student;
+            }
+        }
+        $allUrl = buildURL('assignment_view.php', ['gibbonAssignmentID' => $gibbonAssignmentID]);
+        $ungradedUrl = buildURL('assignment_view.php', ['gibbonAssignmentID' => $gibbonAssignmentID, 'show' => 'ungraded']);
+        ?>
+        <p>
+            <a href="<?php echo $allUrl; ?>"><?php echo __('All Students'); ?></a>
+            | <a href="<?php echo $ungradedUrl; ?>"><?php echo __('Ungraded'); ?></a>
+            <span class="text-gray-600"><?php echo sprintf(__('%1$s students, %2$s ungraded'), count($roster), count(array_filter($roster, function ($student) {
+                return !in_array($student['status'] ?? '', ['Graded', 'Returned'], true);
+            }))); ?></span>
+        </p>
+        <?php if (empty($visible)): ?>
+            <p><?php echo $ungradedOnly ? __('Every student on this roster has a grade.') : __('There are no students enrolled in this class.'); ?></p>
+        <?php else:
+            $gradeForm = Form::create('gradeRoster', $session->get('absoluteURL').'/modules/'.$session->get('module').'/assignment_grade_process.php');
+            $gradeForm->addHiddenValue('address', $session->get('address'));
+            $gradeForm->addHiddenValue('intent', 'gradeRoster');
+            $gradeForm->addHiddenValue('gibbonAssignmentID', $gibbonAssignmentID);
+            $gradeForm->addHiddenValue('show', $ungradedOnly ? 'ungraded' : '');
+            $gradeForm->addHiddenValue('count', count($visible));
+            $maxPoints = $assignment->points;
+            $rows = '';
+            foreach ($visible as $index => $student) {
+                $pointsValue = ($student['pointsEarned'] === null || $student['pointsEarned'] === '') ? '' : htmlspecialchars((string) $student['pointsEarned'], ENT_QUOTES, 'UTF-8');
+                $file = '';
+                if (!empty($student['external_doc_id'])) {
+                    $fileUrl = htmlspecialchars($session->get('absoluteURL').'/'.$student['external_doc_id'], ENT_QUOTES, 'UTF-8');
+                    $fileLabel = htmlspecialchars($student['external_submission_id'] ?: __('File'), ENT_QUOTES, 'UTF-8');
+                    $file = '<a href="'.$fileUrl.'" target="_blank">'.$fileLabel.'</a>';
+                }
+                $detail = '';
+                if (!empty($student['gibbonAssignmentSubmissionID'])) {
+                    $detail = '<br/><a href="'.buildURL('assignment_grade.php', ['gibbonAssignmentSubmissionID' => (int) $student['gibbonAssignmentSubmissionID']]).'">'.__('Details').'</a>';
+                }
+                $rows .= '<tr>'
+                    .'<td>'.htmlspecialchars($student['studentFirstName'].' '.$student['studentSurname'], ENT_QUOTES, 'UTF-8')
+                    .'<input type="hidden" name="gibbonPersonID'.$index.'" value="'.(int) $student['gibbonPersonID'].'"></td>'
+                    .'<td>'.htmlspecialchars($student['status'] ?: __('Not Started'), ENT_QUOTES, 'UTF-8').$detail.'</td>'
+                    .'<td>'.($file !== '' ? $file : '—').'</td>'
+                    .'<td><input type="text" name="grade'.$index.'" maxlength="50" value="'.htmlspecialchars((string) ($student['grade'] ?? ''), ENT_QUOTES, 'UTF-8').'" class="w-full"></td>'
+                    .'<td><input type="number" name="points'.$index.'" min="0" step="0.01"'.($maxPoints !== null ? ' max="'.htmlspecialchars((string) $maxPoints, ENT_QUOTES, 'UTF-8').'"' : '').' value="'.$pointsValue.'" class="w-20"></td>'
+                    .'<td><textarea name="feedback'.$index.'" rows="2" class="w-full">'.htmlspecialchars((string) ($student['feedback'] ?? ''), ENT_QUOTES, 'UTF-8').'</textarea></td>'
+                    .'</tr>';
+            }
+            $gradeForm->addRow()->addContent(
+                '<table class="assignment-submissions-table"><thead><tr>'
+                .'<th>'.__('Student').'</th><th>'.__('Status').'</th><th>'.__('File').'</th>'
+                .'<th>'.__('Grade').'</th><th>'.__('Points').'</th><th>'.__('Feedback').'</th>'
+                .'</tr></thead><tbody>'.$rows.'</tbody></table>'
+                .'<p class="text-gray-600">'.__('Leave points blank when a student has not been given a score. Saving this page does not turn a blank into 0.').'</p>'
+            );
+            $gradeForm->addRow()->addSubmit(__('Save Grades'));
+            echo $gradeForm->getOutput();
+        endif; ?>
     </div>
     <?php endif; ?>
 </div>

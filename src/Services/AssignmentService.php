@@ -172,14 +172,36 @@ class AssignmentService
      * @param int $staffID
      * @param int $submissionID
      * @param string $grade
-     * @param float $pointsEarned
+     * @param float|null $pointsEarned Null leaves the score blank instead of storing 0
      * @param string $feedback
      * @return bool
      */
-    public function gradeAssignment(int $staffID, int $submissionID, string $grade, float $pointsEarned, string $feedback): bool
+    public function gradeAssignment(int $staffID, int $submissionID, string $grade, ?float $pointsEarned, string $feedback): bool
     {
+        $graded = $grade !== '' || $pointsEarned !== null || $feedback !== '';
+        if (!$graded) {
+            $sql = "
+                UPDATE gibbonAssignmentSubmission SET
+                    status = IF(submittedDate IS NULL, 'Not Started', 'Submitted'),
+                    grade = NULL,
+                    pointsEarned = NULL,
+                    feedback = NULL,
+                    gibbonPersonIDGrader = NULL,
+                    timestampGraded = NULL,
+                    gibbonPersonIDLastEdit = :gibbonPersonIDLastEdit,
+                    timestampLastEdit = NOW()
+                WHERE gibbonAssignmentSubmissionID = :submissionID
+            ";
+            $this->connection->executeQuery([
+                'gibbonPersonIDLastEdit' => $staffID,
+                'submissionID' => $submissionID,
+            ], $sql);
+
+            return $this->connection->getQuerySuccess();
+        }
+
         $sql = "
-            UPDATE gibbonAssignmentSubmission SET 
+            UPDATE gibbonAssignmentSubmission SET
                 status = 'Graded',
                 grade = :grade,
                 pointsEarned = :pointsEarned,
@@ -191,16 +213,69 @@ class AssignmentService
             WHERE gibbonAssignmentSubmissionID = :submissionID
         ";
 
-        $params = [
-            'grade' => $grade,
+        $this->connection->executeQuery([
+            'grade' => $grade !== '' ? $grade : null,
             'pointsEarned' => $pointsEarned,
-            'feedback' => $feedback,
+            'feedback' => $feedback !== '' ? $feedback : null,
             'gibbonPersonIDGrader' => $staffID,
             'gibbonPersonIDLastEdit' => $staffID,
-            'submissionID' => $submissionID
-        ];
+            'submissionID' => $submissionID,
+        ], $sql);
 
-        $result = $this->connection->executeQuery($params, $sql);
-        return (bool)$result->rowCount();
+        return $this->connection->getQuerySuccess();
+    }
+
+    /**
+     * Save one roster row. Blank points stay null. A student with no submission and nothing entered is skipped.
+     * Returns saved, skipped, or invalid.
+     */
+    public function saveRosterGrade(int $staffID, array $assignment, array $student, string $grade, ?float $pointsEarned, string $feedback): string
+    {
+        $grade = mb_substr(trim($grade), 0, 50);
+        $feedback = trim($feedback);
+        $max = $assignment['points'] ?? null;
+        if ($pointsEarned !== null && ($pointsEarned < 0 || ($max !== null && $max !== '' && $pointsEarned > (float) $max))) {
+            return 'invalid';
+        }
+
+        $hasGrade = $grade !== '' || $pointsEarned !== null || $feedback !== '';
+        $submissionID = (int) ($student['gibbonAssignmentSubmissionID'] ?? 0);
+        $storedPoints = ($student['pointsEarned'] ?? '') === '' || $student['pointsEarned'] === null
+            ? null
+            : round((float) $student['pointsEarned'], 2);
+        $unchanged = $grade === trim((string) ($student['grade'] ?? ''))
+            && $pointsEarned === $storedPoints
+            && $feedback === trim((string) ($student['feedback'] ?? ''));
+        if ($unchanged || ($submissionID <= 0 && !$hasGrade)) {
+            return 'skipped';
+        }
+
+        if ($submissionID > 0) {
+            return $this->gradeAssignment($staffID, $submissionID, $grade, $pointsEarned, $feedback) ? 'saved' : 'invalid';
+        }
+
+        $sql = "
+            INSERT INTO gibbonAssignmentSubmission (
+                gibbonAssignmentID, gibbonPersonID, gibbonSchoolYearID, status,
+                grade, pointsEarned, feedback, gibbonPersonIDGrader, timestampGraded,
+                gibbonPersonIDLastEdit, timestampLastEdit
+            ) VALUES (
+                :gibbonAssignmentID, :gibbonPersonID, :gibbonSchoolYearID, 'Graded',
+                :grade, :pointsEarned, :feedback, :gibbonPersonIDGrader, NOW(),
+                :gibbonPersonIDLastEdit, NOW()
+            )
+        ";
+        $inserted = $this->connection->insert($sql, [
+            'gibbonAssignmentID' => (int) $assignment['gibbonAssignmentID'],
+            'gibbonPersonID' => (int) $student['gibbonPersonID'],
+            'gibbonSchoolYearID' => (int) $assignment['gibbonSchoolYearID'],
+            'grade' => $grade !== '' ? $grade : null,
+            'pointsEarned' => $pointsEarned,
+            'feedback' => $feedback !== '' ? $feedback : null,
+            'gibbonPersonIDGrader' => $staffID,
+            'gibbonPersonIDLastEdit' => $staffID,
+        ]);
+
+        return $inserted ? 'saved' : 'invalid';
     }
 }

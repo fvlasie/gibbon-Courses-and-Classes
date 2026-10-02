@@ -25,6 +25,47 @@ class AssignmentSubmissionGateway extends QueryableGateway
     }
 
 
+    /**
+     * One row per class student, plus anyone who already has a submission. Students with no submission
+     * have a null submission id so the roster can be graded without a file upload.
+     */
+    public function getClassRoster(int $assignmentID): array
+    {
+        $sql = "
+            SELECT p.gibbonPersonID, p.preferredName AS studentFirstName, p.surname AS studentSurname,
+                   s.gibbonAssignmentSubmissionID, s.status, s.grade, s.pointsEarned, s.feedback,
+                   s.submittedDate, s.submittedTime, s.external_doc_id, s.external_submission_id
+            FROM gibbonPerson AS p
+            JOIN (
+                SELECT ccp.gibbonPersonID
+                FROM gibbonAssignment AS a
+                JOIN gibbonCourseClassPerson AS ccp ON ccp.gibbonCourseClassID = a.gibbonCourseClassID
+                    AND ccp.role = 'Student'
+                WHERE a.gibbonAssignmentID = :assignmentID
+                UNION
+                SELECT sub.gibbonPersonID
+                FROM gibbonAssignmentSubmission AS sub
+                WHERE sub.gibbonAssignmentID = :assignmentIDSubmitted
+            ) AS roster ON roster.gibbonPersonID = p.gibbonPersonID
+            LEFT JOIN gibbonAssignmentSubmission AS s ON s.gibbonAssignmentSubmissionID = (
+                SELECT s2.gibbonAssignmentSubmissionID
+                FROM gibbonAssignmentSubmission AS s2
+                WHERE s2.gibbonAssignmentID = :assignmentIDLatest AND s2.gibbonPersonID = p.gibbonPersonID
+                ORDER BY s2.gibbonAssignmentSubmissionID DESC
+                LIMIT 1
+            )
+            ORDER BY p.surname ASC, p.preferredName ASC
+        ";
+
+        $result = $this->db()->executeQuery([
+            'assignmentID' => $assignmentID,
+            'assignmentIDSubmitted' => $assignmentID,
+            'assignmentIDLatest' => $assignmentID,
+        ], $sql);
+
+        return $result->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getSubmissionsByAssignment(int $assignmentID): array
     {
         $sql = "

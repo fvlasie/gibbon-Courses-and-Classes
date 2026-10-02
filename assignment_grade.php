@@ -86,11 +86,14 @@ $row->addTextField('grade')
     ->placeholder('e.g. A, B+, Pass');
 
 $row = $form->addRow();
-$row->addLabel('pointsEarned', __('Points Earned'));
-$row->addNumber('pointsEarned')
-    ->setValue($submission['pointsEarned'] ?? 0)
-    ->setAttribute('step', '0.5')
-    ->setAttribute('max', $submission['maxPoints'] ?? 100);
+$row->addLabel('pointsEarned', __('Points Earned'))->description(__('Leave blank if this assignment has not been given points yet.'));
+$pointsEarned = $row->addNumber('pointsEarned')->decimalPlaces(2)->minimum(0);
+if ($submission['pointsEarned'] !== null && $submission['pointsEarned'] !== '') {
+    $pointsEarned->setValue($submission['pointsEarned']);
+}
+if ($submission['maxPoints'] !== null && $submission['maxPoints'] !== '') {
+    $pointsEarned->maximum((float) $submission['maxPoints']);
+}
 
 $row = $form->addRow();
 $row->addLabel('feedback', __('Qualitative Feedback / Comments'));
