@@ -44,3 +44,12 @@ $sql[$count][0] = '2.6';
 $sql[$count][1] = "
 UPDATE gibbonAction SET URLList='coursesAndClasses_view.php, assignment_list.php, assignment_view.php' WHERE name='Overview' AND gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes');end
 ";
+
+//v2.7
+++$count;
+$sql[$count][0] = '2.7';
+$sql[$count][1] = "
+UPDATE gibbonAction SET URLList='courses_manage.php, courses_manageAjax.php, externalCourseCode_edit.php', description='Edit external course codes and credits for every course in a school year. Administrators only.', defaultPermissionTeacher='N', defaultPermissionSupport='N' WHERE name='Manage All Courses' AND gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes');end
+DELETE gibbonPermission FROM gibbonPermission JOIN gibbonAction ON gibbonAction.gibbonActionID=gibbonPermission.gibbonActionID WHERE gibbonAction.name='Manage All Courses' AND gibbonAction.gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes') AND gibbonPermission.gibbonRoleID<>1;end
+INSERT IGNORE INTO gibbonPermission (gibbonRoleID, gibbonActionID) SELECT 1, gibbonActionID FROM gibbonAction WHERE name='Manage All Courses' AND gibbonModuleID=(SELECT gibbonModuleID FROM gibbonModule WHERE name='Courses and Classes');end
+";

@@ -225,8 +225,8 @@ if (isActionAccessible($guid, $connection2, '/modules/Courses and Classes/course
         }
 
         if ($canOpenOtherCourses) {
-            $otherCoursesUrl = $session->get('absoluteURL').'/fullscreen.php?q=/modules/Courses and Classes/courses_manage.php&width=720&height=360';
-            echo '<p><a href="'.htmlspecialchars($otherCoursesUrl).'" class="thickbox">'.__('Other Courses').'</a></p>';
+            $otherCoursesUrl = $session->get('absoluteURL').'/index.php?q=/modules/Courses and Classes/courses_manage.php';
+            echo '<p><a href="'.htmlspecialchars($otherCoursesUrl).'">'.__('Manage All Courses').'</a></p>';
         }
     }
 ?>

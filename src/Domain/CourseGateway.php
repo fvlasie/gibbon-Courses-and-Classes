@@ -92,6 +92,23 @@ class CourseGateway extends QueryableGateway
         return array_column($rows, 'label', 'gibbonCourseID');
     }
 
+    /**
+     * Every course in the school year with its catalog entry (matched by course code) and class count.
+     */
+    public function selectCourseCatalogBySchoolYear(int $gibbonSchoolYearID): array
+    {
+        return $this->db()->select(
+            "SELECT gibbonCourse.gibbonCourseID, gibbonCourse.nameShort AS courseCode, gibbonCourse.name AS courseName,
+                    gibbonCoursesAndClasses.externalCourseCode, gibbonCoursesAndClasses.credits,
+                    (SELECT COUNT(*) FROM gibbonCourseClass WHERE gibbonCourseClass.gibbonCourseID = gibbonCourse.gibbonCourseID) AS classCount
+             FROM gibbonCourse
+             LEFT JOIN gibbonCoursesAndClasses ON gibbonCoursesAndClasses.courseCode = gibbonCourse.nameShort
+             WHERE gibbonCourse.gibbonSchoolYearID = :gibbonSchoolYearID
+             ORDER BY gibbonCourse.nameShort, gibbonCourse.name",
+            ['gibbonSchoolYearID' => $gibbonSchoolYearID]
+        )->fetchAll() ?: [];
+    }
+
     public function getCourseCatalog(string $courseCode): ?array
     {
         $row = $this->db()->selectOne(
